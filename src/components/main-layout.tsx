@@ -7,6 +7,7 @@ import {
 import { UserProfileMenu } from "@/components/user-profile-menu"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { NotificationMenu } from "@/components/notification-menu"
+import { SearchBar } from "@/components/search-bar"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import prisma from "@/lib/prisma"
@@ -39,7 +40,10 @@ export default async function MainLayout({ children }: MainLayoutProps) {
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4" dir="rtl">
           <SidebarTrigger className="-mr-1" />
-          <div className="mr-auto flex items-center gap-2">
+          <div className="flex-1 flex items-center justify-center px-4">
+            <SearchBar />
+          </div>
+          <div className="flex items-center gap-2">
             <NotificationMenu />
             <ThemeSwitcher />
             <UserProfileMenu

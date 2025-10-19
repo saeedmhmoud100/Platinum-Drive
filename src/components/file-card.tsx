@@ -11,7 +11,9 @@ import {
   Download,
   Trash2,
   MoreVertical,
-  Eye
+  Eye,
+  Share2,
+  Star
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,9 +34,13 @@ interface FileCardProps {
     mimeType: string
     createdAt: Date | string
     storageKey: string
+    isFavorite?: boolean
   }
-  onDelete?: () => void
-  onDownload?: () => void
+  onDelete?: (fileId: string, fileName: string) => void
+  onDownload?: (fileId: string, fileName: string) => void
+  onShare?: (fileId: string, fileName: string) => void
+  onPreview?: (fileId: string, fileName: string, mimeType: string) => void
+  onToggleFavorite?: (fileId: string) => void
   viewMode?: 'grid' | 'list'
 }
 
@@ -78,12 +84,15 @@ function getFileIconColor(mimeType: string) {
   }
 }
 
-export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: FileCardProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
+export function FileCard({ file, onDelete, onDownload, onShare, onPreview, onToggleFavorite, viewMode = 'grid' }: FileCardProps) {
   const [isDownloading, setIsDownloading] = useState(false)
 
   const FileIcon = getFileIcon(file.mimeType)
   const iconColor = getFileIconColor(file.mimeType)
+
+  const handlePreview = () => {
+    onPreview?.(file.id, file.name, file.mimeType)
+  }
 
   const handleDownload = async () => {
     try {
@@ -105,7 +114,7 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
       document.body.removeChild(a)
 
       toast.success('تم تحميل الملف بنجاح')
-      onDownload?.()
+      onDownload?.(file.id, file.name)
     } catch (error) {
       console.error('Download error:', error)
       toast.error('فشل تحميل الملف')
@@ -114,32 +123,19 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) {
-      return
-    }
-
-    try {
-      setIsDeleting(true)
-      const response = await fetch(`/api/files/${file.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('فشل حذف الملف')
-      }
-
-      toast.success('تم نقل الملف إلى سلة المحذوفات')
-      onDelete?.()
-    } catch (error) {
-      console.error('Delete error:', error)
-      toast.error('فشل حذف الملف')
-    } finally {
-      setIsDeleting(false)
-    }
+  const handleDelete = () => {
+    onDelete?.(file.id, file.name)
   }
 
-  const formattedDate = new Date(file.createdAt).toLocaleDateString('ar-EG', {
+  const handleShare = () => {
+    onShare?.(file.id, file.name)
+  }
+
+  const handleToggleFavorite = () => {
+    onToggleFavorite?.(file.id)
+  }
+
+  const formattedDate = new Date(file.createdAt).toLocaleDateString('ar-SA', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -168,6 +164,23 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
           <Button
             size="sm"
             variant="ghost"
+            onClick={handlePreview}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          {onToggleFavorite && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleToggleFavorite}
+              title={file.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+            >
+              <Star className={cn("h-4 w-4", file.isFavorite && "fill-yellow-500 text-yellow-500")} />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={handleDownload}
             disabled={isDownloading}
           >
@@ -176,8 +189,14 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
           <Button
             size="sm"
             variant="ghost"
+            onClick={handleShare}
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={handleDelete}
-            disabled={isDeleting}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -189,6 +208,22 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
   // Grid view
   return (
     <div className="group relative border rounded-lg p-4 hover:shadow-md transition-all bg-card" dir="rtl">
+      {/* Favorite Star - Top Right */}
+      {onToggleFavorite && (
+        <button
+          onClick={handleToggleFavorite}
+          className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-muted transition-colors"
+          title={file.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+        >
+          <Star className={cn(
+            "h-5 w-5 transition-colors",
+            file.isFavorite 
+              ? "fill-yellow-500 text-yellow-500" 
+              : "text-muted-foreground hover:text-yellow-500"
+          )} />
+        </button>
+      )}
+
       {/* File Icon */}
       <div className="flex flex-col items-center gap-3">
         <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
@@ -215,11 +250,25 @@ export function FileCard({ file, onDelete, onDownload, viewMode = 'grid' }: File
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handlePreview}>
+              <Eye className="h-4 w-4 ml-2" />
+              معاينة
+            </DropdownMenuItem>
+            {onToggleFavorite && (
+              <DropdownMenuItem onClick={handleToggleFavorite}>
+                <Star className={cn("h-4 w-4 ml-2", file.isFavorite && "fill-yellow-500 text-yellow-500")} />
+                {file.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleDownload} disabled={isDownloading}>
               <Download className="h-4 w-4 ml-2" />
               تحميل
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-red-600">
+            <DropdownMenuItem onClick={handleShare}>
+              <Share2 className="h-4 w-4 ml-2" />
+              مشاركة
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="h-4 w-4 ml-2" />
               حذف
             </DropdownMenuItem>

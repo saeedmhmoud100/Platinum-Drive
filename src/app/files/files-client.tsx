@@ -1,13 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileUploadZone } from '@/components/file-upload-zone'
 import { FileCard } from '@/components/file-card'
 import { FolderCard } from '@/components/folder-card'
 import { FolderBreadcrumb } from '@/components/folder-breadcrumb'
+import { CreateFolderDialog } from '@/components/create-folder-dialog'
+import { RenameFolderDialog } from '@/components/rename-folder-dialog'
+import { DeleteFolderDialog } from '@/components/delete-folder-dialog'
+import { DeleteFileDialog } from '@/components/delete-file-dialog'
+import { ShareFileDialog } from '@/components/share-file-dialog'
+import FilePreviewDialog from '@/components/file-preview-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Grid3x3, List, Loader2, FolderPlus } from 'lucide-react'
+import { RefreshCw, Grid3x3, List, Loader2, FolderPlus, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface FilesPageClientProps {
@@ -43,6 +57,8 @@ interface BreadcrumbItem {
 }
 
 export default function FilesPageClient({ userId }: FilesPageClientProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [files, setFiles] = useState<FileData[]>([])
   const [folders, setFolders] = useState<FolderData[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,6 +68,19 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
     { id: null, name: 'الرئيسية' }
   ])
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const isProcessingUrlChange = useRef(false)
+  
+  // Dialog states
+  const [createFolderOpen, setCreateFolderOpen] = useState(false)
+  const [renameFolderOpen, setRenameFolderOpen] = useState(false)
+  const [deleteFolderOpen, setDeleteFolderOpen] = useState(false)
+  const [deleteFileOpen, setDeleteFileOpen] = useState(false)
+  const [shareFileOpen, setShareFileOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null)
+  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string; mimeType?: string } | null>(null)
 
   // Fetch files and folders
   const fetchData = async () => {
@@ -77,67 +106,110 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
     }
   }
 
+  // Read folder from URL on mount
+  useEffect(() => {
+    const folderParam = searchParams.get('folder')
+    
+    // Prevent concurrent processing
+    if (isProcessingUrlChange.current) {
+      return
+    }
+    
+    // Only proceed if the URL folder is different from current state
+    if (folderParam && folderParam !== currentFolderId) {
+      isProcessingUrlChange.current = true
+      
+      // Clear current data and show loading immediately
+      setLoading(true)
+      setFiles([])
+      setFolders([])
+      
+      // Fetch folder details and build breadcrumb path
+      const buildBreadcrumbPath = async (folderId: string) => {
+        try {
+          const response = await fetch(`/api/folders/${folderId}`)
+          if (!response.ok) throw new Error('فشل تحميل المجلد')
+          
+          const data = await response.json()
+          const folder = data.folder
+          
+          // Build path from root to current folder
+          const path: BreadcrumbItem[] = [{ id: null, name: 'الرئيسية' }]
+          
+          // If folder has parent, we need to fetch parent chain
+          if (folder.parent) {
+            // For now, just add parent (could be extended to fetch full chain)
+            path.push({ id: folder.parent.id, name: folder.parent.name })
+          }
+          
+          // Add current folder
+          path.push({ id: folder.id, name: folder.name })
+          
+          // Update both breadcrumb and folderId together
+          setBreadcrumbPath(path)
+          setCurrentFolderId(folderId)
+        } catch (error) {
+          console.error('Error building breadcrumb:', error)
+          // Fallback to simple breadcrumb
+          setBreadcrumbPath([
+            { id: null, name: 'الرئيسية' },
+            { id: folderId, name: 'مجلد' }
+          ])
+          setCurrentFolderId(folderId)
+        } finally {
+          isProcessingUrlChange.current = false
+        }
+      }
+      
+      buildBreadcrumbPath(folderParam)
+    } else if (!folderParam && currentFolderId !== null) {
+      isProcessingUrlChange.current = true
+      
+      // Clear data when navigating back to root
+      setLoading(true)
+      setFiles([])
+      setFolders([])
+      setBreadcrumbPath([{ id: null, name: 'الرئيسية' }])
+      setCurrentFolderId(null)
+      
+      isProcessingUrlChange.current = false
+    }
+  }, [searchParams, currentFolderId])
+
   useEffect(() => {
     fetchData()
   }, [refreshKey, currentFolderId])
 
-  const handleCreateFolder = async () => {
-    const folderName = prompt('أدخل اسم المجلد الجديد:')
-    
-    if (!folderName || folderName.trim() === '') {
-      return
-    }
+  const handleCreateFolder = () => {
+    setCreateFolderOpen(true)
+  }
 
-    try {
-      const response = await fetch('/api/folders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: folderName.trim(),
-          parentId: currentFolderId,
-        }),
-      })
+  const handleRenameFolder = (folderId: string, currentName: string) => {
+    setSelectedFolder({ id: folderId, name: currentName })
+    setRenameFolderOpen(true)
+  }
 
-      if (!response.ok) {
-        throw new Error('فشل إنشاء المجلد')
-      }
-
-      toast.success('تم إنشاء المجلد بنجاح')
-      setRefreshKey(prev => prev + 1)
-    } catch (error) {
-      console.error('Error creating folder:', error)
-      toast.error('فشل إنشاء المجلد')
-    }
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    setSelectedFolder({ id: folderId, name: folderName })
+    setDeleteFolderOpen(true)
   }
 
   const handleOpenFolder = async (folderId: string) => {
-    try {
-      // Fetch folder details to add to breadcrumb
-      const response = await fetch(`/api/folders/${folderId}`)
-      if (!response.ok) throw new Error('فشل تحميل المجلد')
-      
-      const data = await response.json()
-      const folder = data.folder
-
-      // Update breadcrumb
-      setBreadcrumbPath(prev => [...prev, { id: folder.id, name: folder.name }])
-      setCurrentFolderId(folderId)
-    } catch (error) {
-      console.error('Error opening folder:', error)
-      toast.error('فشل فتح المجلد')
+    // Prevent navigation if already navigating or already in this folder
+    if (isNavigating || currentFolderId === folderId) {
+      return
     }
+
+    // Navigate using URL - this will trigger the useEffect that reads searchParams
+    router.push(`/files?folder=${folderId}`)
   }
 
   const handleNavigateTo = (folderId: string | null) => {
-    // Find the index of the clicked breadcrumb item
-    const index = breadcrumbPath.findIndex(item => item.id === folderId)
-    
-    if (index !== -1) {
-      // Update breadcrumb to remove everything after clicked item
-      setBreadcrumbPath(breadcrumbPath.slice(0, index + 1))
-      setCurrentFolderId(folderId)
+    // Navigate using URL - if null (root), go to /files, otherwise go to /files?folder=id
+    if (folderId === null) {
+      router.push('/files')
+    } else {
+      router.push(`/files?folder=${folderId}`)
     }
   }
 
@@ -149,22 +221,71 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
     setRefreshKey(prev => prev + 1)
   }
 
-  const handleFileDelete = () => {
-    setRefreshKey(prev => prev + 1)
+  const handleFileDelete = (fileId: string, fileName: string) => {
+    setSelectedFile({ id: fileId, name: fileName })
+    setDeleteFileOpen(true)
   }
 
-  const handleFolderDelete = () => {
-    setRefreshKey(prev => prev + 1)
+  const handleFileShare = (fileId: string, fileName: string) => {
+    setSelectedFile({ id: fileId, name: fileName })
+    setShareFileOpen(true)
   }
 
-  const handleFolderRename = () => {
+  const handleFilePreview = (fileId: string, fileName: string, mimeType: string) => {
+    setSelectedFile({ id: fileId, name: fileName, mimeType })
+    setPreviewOpen(true)
+  }
+
+  const handleToggleFileFavorite = async (fileId: string) => {
+    try {
+      const response = await fetch(`/api/files/${fileId}/favorite`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('فشل تحديث المفضلة')
+      }
+
+      const data = await response.json()
+      toast.success(data.message)
+      
+      // Refresh the file list to show updated favorite status
+      handleRefresh()
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+      toast.error('فشل تحديث المفضلة')
+    }
+  }
+
+  const handleToggleFolderFavorite = async (folderId: string) => {
+    try {
+      const response = await fetch(`/api/folders/${folderId}/favorite`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('فشل تحديث المفضلة')
+      }
+
+      const data = await response.json()
+      toast.success(data.message)
+      
+      // Refresh the folder list to show updated favorite status
+      handleRefresh()
+    } catch (error) {
+      console.error('Error toggling folder favorite:', error)
+      toast.error('فشل تحديث المفضلة')
+    }
+  }
+
+  const handleDialogSuccess = () => {
     setRefreshKey(prev => prev + 1)
   }
 
   const totalItems = files.length + folders.length
 
   return (
-    <div className="container mx-auto p-6 space-y-6" dir="rtl">
+    <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -228,34 +349,29 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
         </Card>
       )}
 
-      {/* Upload Zone */}
-      <Card>
-        <CardHeader>
-          <CardTitle>رفع الملفات</CardTitle>
-          <CardDescription>
-            اسحب وأفلت الملفات أو انقر لتحديدها
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUploadZone
-            folderId={currentFolderId}
-            onUploadComplete={handleUploadComplete}
-          />
-        </CardContent>
-      </Card>
-
       {/* Files and Folders List */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            المحتويات ({totalItems})
-          </CardTitle>
-          <CardDescription>
-            {folders.length > 0 && `${folders.length} مجلد`}
-            {folders.length > 0 && files.length > 0 && ' • '}
-            {files.length > 0 && `${files.length} ملف`}
-            {totalItems === 0 && 'لا توجد محتويات بعد'}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>
+                المحتويات ({totalItems})
+              </CardTitle>
+              <CardDescription>
+                {folders.length > 0 && `${folders.length} مجلد`}
+                {folders.length > 0 && files.length > 0 && ' • '}
+                {files.length > 0 && `${files.length} ملف`}
+                {totalItems === 0 && 'لا توجد محتويات بعد'}
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => setUploadDialogOpen(true)}
+              size="sm"
+            >
+              <Upload className="h-4 w-4 ml-2" />
+              رفع ملفات
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -280,8 +396,9 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
                   folder={folder}
                   viewMode={viewMode}
                   onOpen={handleOpenFolder}
-                  onDelete={handleFolderDelete}
-                  onRename={handleFolderRename}
+                  onDelete={handleDeleteFolder}
+                  onRename={handleRenameFolder}
+                  onToggleFavorite={handleToggleFolderFavorite}
                 />
               ))}
 
@@ -292,12 +409,86 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
                   file={file}
                   viewMode={viewMode}
                   onDelete={handleFileDelete}
+                  onShare={handleFileShare}
+                  onPreview={handleFilePreview}
+                  onToggleFavorite={handleToggleFileFavorite}
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        parentFolderId={currentFolderId}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <RenameFolderDialog
+        open={renameFolderOpen}
+        onOpenChange={setRenameFolderOpen}
+        folderId={selectedFolder?.id || null}
+        currentName={selectedFolder?.name || ''}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <DeleteFolderDialog
+        open={deleteFolderOpen}
+        onOpenChange={setDeleteFolderOpen}
+        folderId={selectedFolder?.id || null}
+        folderName={selectedFolder?.name || ''}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <DeleteFileDialog
+        open={deleteFileOpen}
+        onOpenChange={setDeleteFileOpen}
+        fileId={selectedFile?.id || null}
+        fileName={selectedFile?.name || ''}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <ShareFileDialog
+        open={shareFileOpen}
+        onOpenChange={setShareFileOpen}
+        fileId={selectedFile?.id || null}
+        fileName={selectedFile?.name || ''}
+        onSuccess={handleDialogSuccess}
+      />
+
+      {/* File Preview Dialog */}
+      {selectedFile && (
+        <FilePreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
+          mimeType={selectedFile.mimeType || ''}
+        />
+      )}
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <div dir="rtl" className="space-y-4">
+            <DialogHeader className="text-right">
+              <DialogTitle className="text-right">رفع الملفات</DialogTitle>
+              <DialogDescription className="text-right">
+                اسحب وأفلت الملفات أو انقر لتحديدها
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <FileUploadZone
+                folderId={currentFolderId}
+                onUploadComplete={handleUploadComplete}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

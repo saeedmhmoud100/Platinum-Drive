@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import MainLayout from '@/components/main-layout'
 import FilesPageClient from './files-client'
 
 export default async function FilesPage() {
@@ -9,5 +10,9 @@ export default async function FilesPage() {
     redirect('/sign-in')
   }
 
-  return <FilesPageClient userId={session.user.id} />
+  return (
+    <MainLayout>
+      <FilesPageClient userId={session.user.id} />
+    </MainLayout>
+  )
 }
