@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 // GET - Get folder details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -17,7 +17,7 @@ export async function GET(
       )
     }
 
-    const folderId = params.id
+    const { id: folderId } = await params
 
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
@@ -68,7 +68,7 @@ export async function GET(
 // PUT - Update folder (rename)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -80,7 +80,7 @@ export async function PUT(
       )
     }
 
-    const folderId = params.id
+    const { id: folderId } = await params
     const body = await request.json()
     const { name } = body
 
@@ -136,7 +136,7 @@ export async function PUT(
 // DELETE - Delete folder
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -148,7 +148,7 @@ export async function DELETE(
       )
     }
 
-    const folderId = params.id
+    const { id: folderId } = await params
 
     // Check ownership and get folder with counts
     const folder = await prisma.folder.findUnique({

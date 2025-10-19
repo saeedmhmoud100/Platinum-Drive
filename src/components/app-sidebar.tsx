@@ -10,7 +10,9 @@ import {
   Trash2, 
   Settings,
   HelpCircle,
-  LogOut
+  LogOut,
+  Search,
+  Share2
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -42,6 +44,16 @@ const mainItems = [
     title: "الملفات",
     url: "/files",
     icon: FolderOpen,
+  },
+  {
+    title: "البحث",
+    url: "/search",
+    icon: Search,
+  },
+  {
+    title: "المشاركات",
+    url: "/shared",
+    icon: Share2,
   },
   {
     title: "المفضلة",

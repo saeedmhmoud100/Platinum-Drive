@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Folder, MoreVertical, Edit, Trash2, FolderOpen } from 'lucide-react'
+import { Folder, MoreVertical, Edit, Trash2, FolderOpen, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -17,61 +17,38 @@ interface FolderCardProps {
     id: string
     name: string
     createdAt: Date | string
+    isFavorite?: boolean
     _count?: {
       files: number
       children: number
     }
   }
   onOpen?: (folderId: string) => void
-  onDelete?: () => void
-  onRename?: (folderId: string, newName: string) => void
+  onDelete?: (folderId: string, folderName: string) => void
+  onRename?: (folderId: string, currentName: string) => void
+  onToggleFavorite?: (folderId: string) => void
   viewMode?: 'grid' | 'list'
 }
 
-export function FolderCard({ folder, onOpen, onDelete, onRename, viewMode = 'grid' }: FolderCardProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isRenaming, setIsRenaming] = useState(false)
-
-  const handleOpen = () => {
+export function FolderCard({ folder, onOpen, onDelete, onRename, onToggleFavorite, viewMode = 'grid' }: FolderCardProps) {
+  const handleOpen = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     onOpen?.(folder.id)
   }
 
-  const handleRename = async () => {
-    const newName = prompt('أدخل اسم المجلد الجديد:', folder.name)
-    
-    if (!newName || newName.trim() === '') {
-      return
-    }
-
-    if (newName.trim() === folder.name) {
-      return
-    }
-
-    try {
-      setIsRenaming(true)
-      const response = await fetch(`/api/folders/${folder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: newName.trim() }),
-      })
-
-      if (!response.ok) {
-        throw new Error('فشل إعادة تسمية المجلد')
-      }
-
-      toast.success('تم إعادة تسمية المجلد بنجاح')
-      onRename?.(folder.id, newName.trim())
-    } catch (error) {
-      console.error('Rename error:', error)
-      toast.error('فشل إعادة تسمية المجلد')
-    } finally {
-      setIsRenaming(false)
-    }
+  const handleRename = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onRename?.(folder.id, folder.name)
   }
 
-  const handleDelete = async () => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onToggleFavorite?.(folder.id)
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
     const fileCount = folder._count?.files || 0
     const folderCount = folder._count?.children || 0
 
@@ -80,28 +57,7 @@ export function FolderCard({ folder, onOpen, onDelete, onRename, viewMode = 'gri
       return
     }
 
-    if (!confirm(`هل أنت متأكد من حذف المجلد "${folder.name}"؟`)) {
-      return
-    }
-
-    try {
-      setIsDeleting(true)
-      const response = await fetch(`/api/folders/${folder.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('فشل حذف المجلد')
-      }
-
-      toast.success('تم حذف المجلد بنجاح')
-      onDelete?.()
-    } catch (error) {
-      console.error('Delete error:', error)
-      toast.error('فشل حذف المجلد')
-    } finally {
-      setIsDeleting(false)
-    }
+    onDelete?.(folder.id, folder.name)
   }
 
   const formattedDate = new Date(folder.createdAt).toLocaleDateString('ar-EG', {
@@ -147,13 +103,18 @@ export function FolderCard({ folder, onOpen, onDelete, onRename, viewMode = 'gri
                 <FolderOpen className="h-4 w-4 ml-2" />
                 فتح
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleRename} disabled={isRenaming}>
+              {onToggleFavorite && (
+                <DropdownMenuItem onClick={handleToggleFavorite}>
+                  <Star className={cn("h-4 w-4 ml-2", folder.isFavorite && "fill-yellow-500 text-yellow-500")} />
+                  {folder.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleRename}>
                 <Edit className="h-4 w-4 ml-2" />
                 إعادة تسمية
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={handleDelete} 
-                disabled={isDeleting}
+                onClick={handleDelete}
                 className="text-red-600"
               >
                 <Trash2 className="h-4 w-4 ml-2" />
@@ -173,6 +134,22 @@ export function FolderCard({ folder, onOpen, onDelete, onRename, viewMode = 'gri
       dir="rtl"
       onClick={handleOpen}
     >
+      {/* Favorite Star - Top Right */}
+      {onToggleFavorite && (
+        <button
+          onClick={handleToggleFavorite}
+          className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-muted transition-colors"
+          title={folder.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+        >
+          <Star className={cn(
+            "h-5 w-5 transition-colors",
+            folder.isFavorite 
+              ? "fill-yellow-500 text-yellow-500" 
+              : "text-muted-foreground hover:text-yellow-500"
+          )} />
+        </button>
+      )}
+
       {/* Folder Icon */}
       <div className="flex flex-col items-center gap-3">
         <div className="w-16 h-16 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
@@ -206,13 +183,18 @@ export function FolderCard({ folder, onOpen, onDelete, onRename, viewMode = 'gri
               <FolderOpen className="h-4 w-4 ml-2" />
               فتح
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleRename} disabled={isRenaming}>
+            {onToggleFavorite && (
+              <DropdownMenuItem onClick={handleToggleFavorite}>
+                <Star className={cn("h-4 w-4 ml-2", folder.isFavorite && "fill-yellow-500 text-yellow-500")} />
+                {folder.isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleRename}>
               <Edit className="h-4 w-4 ml-2" />
               إعادة تسمية
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={handleDelete} 
-              disabled={isDeleting}
+              onClick={handleDelete}
               className="text-red-600"
             >
               <Trash2 className="h-4 w-4 ml-2" />

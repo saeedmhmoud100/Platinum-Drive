@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get current user data with roles
+    // Get current user data with roles and storage info
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         image: true,
+        usedStorageBytes: true,
+        storageQuotaBytes: true,
         roles: {
           include: {
             role: true
@@ -46,7 +48,9 @@ export async function GET(request: NextRequest) {
       email: user.email,
       image: user.image,
       roles: roleNames,
-      role: primaryRole
+      role: primaryRole,
+      usedStorageBytes: Number(user.usedStorageBytes),
+      storageQuotaBytes: Number(user.storageQuotaBytes)
     })
   } catch (error) {
     console.error("Get user error:", error)
