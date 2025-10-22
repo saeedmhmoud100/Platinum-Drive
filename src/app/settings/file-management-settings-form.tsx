@@ -11,8 +11,7 @@ import { Loader2 } from "lucide-react"
 interface FileManagementSettings {
   defaultSortBy: string
   defaultViewMode: string
-  trashRetentionDays: number
-  maxPreviewSize: number
+  autoDeleteTrashed: number
 }
 
 export default function FileManagementSettingsForm() {
@@ -21,8 +20,7 @@ export default function FileManagementSettingsForm() {
   const [settings, setSettings] = useState<FileManagementSettings>({
     defaultSortBy: "modified",
     defaultViewMode: "grid",
-    trashRetentionDays: 30,
-    maxPreviewSize: 10,
+    autoDeleteTrashed: 30,
   })
 
   useEffect(() => {
@@ -37,10 +35,9 @@ export default function FileManagementSettingsForm() {
       
       const data = await response.json()
       setSettings({
-        defaultSortBy: data.defaultSortBy || "modified",
-        defaultViewMode: data.defaultViewMode || "grid",
-        trashRetentionDays: data.trashRetentionDays || 30,
-        maxPreviewSize: data.maxPreviewSize || 10,
+        defaultSortBy: data.settings?.defaultSortBy || "modified",
+        defaultViewMode: data.settings?.defaultViewMode || "grid",
+        autoDeleteTrashed: data.settings?.autoDeleteTrashed || 30,
       })
     } catch (error) {
       toast.error("فشل تحميل الإعدادات")
@@ -120,34 +117,19 @@ export default function FileManagementSettingsForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="trashRetentionDays" className="text-sm font-medium">مدة الاحتفاظ بالملفات المحذوفة (بالأيام)</Label>
+          <Label htmlFor="autoDeleteTrashed" className="text-sm font-medium">مدة الاحتفاظ بالملفات المحذوفة (بالأيام)</Label>
           <Input
-            id="trashRetentionDays"
+            id="autoDeleteTrashed"
             type="number"
             min="1"
             max="365"
-            value={settings.trashRetentionDays}
-            onChange={(e) => setSettings({ ...settings, trashRetentionDays: parseInt(e.target.value) || 30 })}
+            value={settings.autoDeleteTrashed}
+            onChange={(e) => setSettings({ ...settings, autoDeleteTrashed: parseInt(e.target.value) || 30 })}
             className="text-right h-10"
           />
           <p className="text-xs text-muted-foreground text-right">عدد الأيام قبل حذف الملفات من سلة المهملات نهائياً</p>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="maxPreviewSize" className="text-sm font-medium">الحد الأقصى لحجم المعاينة (ميجابايت)</Label>
-          <Input
-            id="maxPreviewSize"
-            type="number"
-            min="1"
-            max="100"
-            value={settings.maxPreviewSize}
-            onChange={(e) => setSettings({ ...settings, maxPreviewSize: parseInt(e.target.value) || 10 })}
-            className="text-right h-10"
-          />
-          <p className="text-xs text-muted-foreground text-right">أقصى حجم للملفات التي يمكن معاينتها في المتصفح</p>
-        </div>
       </div>
-
       <div className="flex justify-start">
         <Button type="submit" disabled={loading} className="px-8">
           {loading ? (

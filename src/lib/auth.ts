@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { recordLoginAttempt } from "@/lib/login-history-utils"
+import { sendLoginAlert } from "@/lib/security-utils"
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
@@ -64,19 +65,40 @@ export const authConfig: NextAuthConfig = {
         }
 
         // Record successful login attempt
+        const ip = request?.headers?.get?.('x-forwarded-for')?.split(',')[0] || 
+                   request?.headers?.get?.('x-real-ip') || 
+                   'Unknown IP'
+        const userAgent = request?.headers?.get?.('user-agent') || 'Unknown'
+        
         await recordLoginAttempt({
           userId: user.id,
           status: "success",
-          ip: request?.headers?.get?.('x-forwarded-for')?.split(',')[0] || 
-              request?.headers?.get?.('x-real-ip') || 
-              'Unknown IP',
-          userAgent: request?.headers?.get?.('user-agent') || 'Unknown'
+          ip,
+          userAgent
         })
 
         // Update lastLoginAt timestamp
         await prisma.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() }
+          data: { 
+            lastLoginAt: new Date(),
+            lastActivityAt: new Date()
+          }
+        })
+
+        // Send login alert notification (don't await - fire and forget to avoid blocking login)
+        const deviceInfo = userAgent.includes('Mobile') ? 'جهاز محمول' : 'متصفح ويب'
+        sendLoginAlert(user.id, deviceInfo, ip).catch((err: any) => {
+          console.error('Login alert failed:', err)
+        })
+
+        // Send login email notification (dynamic import to avoid edge runtime issues)
+        import('@/lib/email-service').then(({ sendNewLoginEmail }) => {
+          sendNewLoginEmail(user.email, user.name || undefined, deviceInfo, undefined).catch((err: any) => {
+            console.error('Login email failed:', err)
+          })
+        }).catch((err: any) => {
+          console.error('Failed to load email service:', err)
         })
 
         return {

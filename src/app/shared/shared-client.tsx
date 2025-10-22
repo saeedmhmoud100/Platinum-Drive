@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import FilePreviewDialog from '@/components/file-preview-dialog'
+import { useDateFormatter } from '@/hooks/use-date-formatter'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,13 +118,14 @@ function formatDate(dateString: string) {
   if (diffDays < 7) return `منذ ${diffDays} أيام`
   if (diffDays < 30) return `منذ ${Math.floor(diffDays / 7)} أسابيع`
   
-  return date.toLocaleDateString('ar-EG', {
+  return date.toLocaleDateString('ar', {
     month: 'short',
     day: 'numeric',
   })
 }
 
 export default function SharedLinksClient({ userId }: SharedLinksClientProps) {
+  const { formatDate } = useDateFormatter()
   const [sharedLinks, setSharedLinks] = useState<SharedLinkData[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -268,10 +270,7 @@ export default function SharedLinksClient({ userId }: SharedLinksClientProps) {
               const iconColor = getFileIconColor(link.file.mimeType)
               const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date()
               const expiryDate = link.expiresAt
-                ? new Date(link.expiresAt).toLocaleDateString('ar-EG', {
-                    month: 'short',
-                    day: 'numeric',
-                  })
+                ? formatDate(link.expiresAt)
                 : null
 
               return (
@@ -373,10 +372,7 @@ export default function SharedLinksClient({ userId }: SharedLinksClientProps) {
               const iconColor = getFileIconColor(link.file.mimeType)
               const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date()
               const expiryDate = link.expiresAt
-                ? new Date(link.expiresAt).toLocaleDateString('ar-EG', {
-                    month: 'short',
-                    day: 'numeric',
-                  })
+                ? formatDate(link.expiresAt)
                 : null
 
               return (

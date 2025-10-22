@@ -3,11 +3,10 @@ import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import MainLayout from "@/components/main-layout"
-import { Settings, Bell, Upload, Lock, Eye, FolderOpen } from "lucide-react"
+import { Settings, Bell, Upload, Lock, FolderOpen } from "lucide-react"
 import GeneralSettingsForm from "./general-settings-form"
 import NotificationSettingsForm from "./notification-settings-form"
 import UploadSettingsForm from "./upload-settings-form"
-import PrivacySettingsForm from "./privacy-settings-form"
 import FileManagementSettingsForm from "./file-management-settings-form"
 import SecuritySettingsForm from "./security-settings-form"
 
@@ -29,7 +28,7 @@ export default async function SettingsPage() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-8" dir="rtl">
-          <TabsList className="grid w-full grid-cols-6 h-12 p-1">
+          <TabsList className="grid w-full grid-cols-5 h-12 p-1">
             <TabsTrigger value="general" className="flex items-center gap-2 text-sm h-10">
               <Settings className="h-4 w-4" />
               عام
@@ -41,10 +40,6 @@ export default async function SettingsPage() {
             <TabsTrigger value="upload" className="flex items-center gap-2 text-sm h-10">
               <Upload className="h-4 w-4" />
               الرفع
-            </TabsTrigger>
-            <TabsTrigger value="privacy" className="flex items-center gap-2 text-sm h-10">
-              <Eye className="h-4 w-4" />
-              الخصوصية
             </TabsTrigger>
             <TabsTrigger value="files" className="flex items-center gap-2 text-sm h-10">
               <FolderOpen className="h-4 w-4" />
@@ -103,23 +98,6 @@ export default async function SettingsPage() {
               </CardHeader>
               <CardContent className="text-right">
                 <UploadSettingsForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="privacy" className="space-y-8">
-            <Card className="p-8" dir="rtl">
-              <CardHeader className="pb-6 text-right">
-                <CardTitle className="flex items-center gap-3 text-2xl justify-start">
-                  <Eye className="h-6 w-6" />
-                  إعدادات الخصوصية
-                </CardTitle>
-                <CardDescription className="text-base text-right">
-                  تحكم في من يمكنه رؤية ملفك الشخصي ونشاطك
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-right">
-                <PrivacySettingsForm />
               </CardContent>
             </Card>
           </TabsContent>

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +21,27 @@ export function ThemeSwitcher() {
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleThemeChange = async (newTheme: string) => {
+    try {
+      // Update theme immediately in UI
+      setTheme(newTheme)
+      
+      // Save to database
+      const response = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: newTheme })
+      })
+
+      if (!response.ok) {
+        throw new Error('فشل حفظ إعدادات المظهر')
+      }
+    } catch (error) {
+      console.error('Failed to save theme:', error)
+      toast.error('فشل حفظ إعدادات المظهر')
+    }
+  }
 
   if (!mounted) {
     return (
@@ -40,15 +62,15 @@ export function ThemeSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => handleThemeChange("light")} className="cursor-pointer">
           <Sun className="ml-2 h-4 w-4" />
           <span>فاتح</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")} className="cursor-pointer">
           <Moon className="ml-2 h-4 w-4" />
           <span>داكن</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => handleThemeChange("system")} className="cursor-pointer">
           <Monitor className="ml-2 h-4 w-4" />
           <span>النظام</span>
         </DropdownMenuItem>

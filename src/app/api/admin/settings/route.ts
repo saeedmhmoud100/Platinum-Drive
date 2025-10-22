@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { errorResponse, successResponse } from "@/lib/api-utils"
+import { clearDateSettingsCache } from "@/lib/date-utils"
 
 // Check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
@@ -136,6 +137,9 @@ export async function PUT(request: NextRequest) {
     })
 
     await Promise.all(updatePromises)
+
+    // Clear date settings cache so new settings take effect immediately
+    clearDateSettingsCache()
 
     // Log the action
     await prisma.auditLog.create({

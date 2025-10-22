@@ -1,7 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Bell, Check, X } from "lucide-react"
+import { Bell, Check, X, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { useDateFormatter } from "@/hooks/use-date-formatter"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,65 +20,130 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Notification {
   id: string
-  title: string
-  message: string
-  time: string
-  read: boolean
-  type?: "info" | "success" | "warning" | "error"
+  userId: string
+  type: string
+  data: {
+    title: string
+    message: string
+    icon?: string
+    link?: string
+    metadata?: Record<string, any>
+  }
+  isRead: boolean
+  createdAt: string
+  delivered: boolean
+  deliveredAt: string | null
 }
 
-// Demo notifications
-const demoNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "رسالة جديدة",
-    message: "لديك رسالة جديدة من أحمد محمد",
-    time: "منذ 5 دقائق",
-    read: false,
-    type: "info",
-  },
-  {
-    id: "2",
-    title: "تحديث النظام",
-    message: "تم تحديث النظام بنجاح",
-    time: "منذ ساعة",
-    read: false,
-    type: "success",
-  },
-  {
-    id: "3",
-    title: "تنبيه",
-    message: "يرجى مراجعة الطلبات المعلقة",
-    time: "منذ 3 ساعات",
-    read: true,
-    type: "warning",
-  },
-  {
-    id: "4",
-    title: "مهمة جديدة",
-    message: "تم تعيين مهمة جديدة لك",
-    time: "أمس",
-    read: true,
-    type: "info",
-  },
-]
+// Helper to format time ago
+function getTimeAgo(date: string, formatDate: (date: string | Date) => string): string {
+  const now = new Date()
+  const notifDate = new Date(date)
+  const seconds = Math.floor((now.getTime() - notifDate.getTime()) / 1000)
+
+  if (seconds < 60) return "الآن"
+  if (seconds < 3600) return `منذ ${Math.floor(seconds / 60)} دقيقة`
+  if (seconds < 86400) return `منذ ${Math.floor(seconds / 3600)} ساعة`
+  if (seconds < 604800) return `منذ ${Math.floor(seconds / 86400)} يوم`
+  return formatDate(notifDate)
+}
 
 export function NotificationMenu() {
-  const [notifications, setNotifications] = React.useState<Notification[]>(demoNotifications)
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const router = useRouter()
+  const { formatDate } = useDateFormatter()
+  const [notifications, setNotifications] = React.useState<Notification[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [unreadCount, setUnreadCount] = React.useState(0)
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+  const fetchNotifications = React.useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true)
+      const response = await fetch("/api/notifications?limit=20")
+      if (!response.ok) throw new Error("فشل تحميل الإشعارات")
+      
+      const data = await response.json()
+      setNotifications(data.notifications)
+      setUnreadCount(data.unreadCount)
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error)
+    } finally {
+      if (showLoading) setLoading(false)
+    }
+  }, [])
+
+  // Initial load
+  React.useEffect(() => {
+    fetchNotifications()
+  }, [fetchNotifications])
+
+  // Poll for new notifications every 30 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNotifications(false) // Don't show loading on background polls
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+      })
+      if (!response.ok) throw new Error("فشل تحديث الإشعار")
+      
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    } catch (error) {
+      toast.error("فشل تحديث الإشعار")
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+      })
+      if (!response.ok) throw new Error("فشل تحديث الإشعارات")
+      
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+      setUnreadCount(0)
+      toast.success("تم تعليم جميع الإشعارات كمقروءة")
+    } catch (error) {
+      toast.error("فشل تحديث الإشعارات")
+    }
   }
 
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  const removeNotification = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) throw new Error("فشل حذف الإشعار")
+      
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+      // Decrease unread count if the deleted notification was unread
+      const deletedNotif = notifications.find((n) => n.id === id)
+      if (deletedNotif && !deletedNotif.isRead) {
+        setUnreadCount((prev) => Math.max(0, prev - 1))
+      }
+    } catch (error) {
+      toast.error("فشل حذف الإشعار")
+    }
+  }
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read when clicked
+    if (!notification.isRead) {
+      markAsRead(notification.id)
+    }
+    
+    // Navigate to link if exists
+    if (notification.data.link) {
+      router.push(notification.data.link)
+    }
   }
 
   return (
@@ -110,7 +178,12 @@ export function NotificationMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <ScrollArea className="h-[300px]">
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2">جاري التحميل...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Bell className="h-12 w-12 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground">لا توجد إشعارات</p>
@@ -120,35 +193,42 @@ export function NotificationMenu() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`group relative rounded-md p-3 hover:bg-accent transition-colors ${
-                    !notification.read ? "bg-accent/50" : ""
+                  className={`group relative rounded-md p-3 hover:bg-accent transition-colors cursor-pointer ${
+                    !notification.isRead ? "bg-accent/50" : ""
                   }`}
                   dir="rtl"
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="space-y-2">
                     <div className="flex items-start gap-3">
+                      {notification.data.icon && (
+                        <span className="text-2xl">{notification.data.icon}</span>
+                      )}
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium leading-none">
-                            {notification.title}
+                            {notification.data.title}
                           </p>
-                          {!notification.read && (
+                          {!notification.isRead && (
                             <div className="h-2 w-2 rounded-full bg-primary mr-auto" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2">
-                          {notification.message}
+                          {notification.data.message}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-1 items-center justify-between">
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!notification.read && (
+                        {!notification.isRead && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6"
-                            onClick={() => markAsRead(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markAsRead(notification.id)
+                            }}
                           >
                             <Check className="h-3 w-3" />
                           </Button>
@@ -157,13 +237,16 @@ export function NotificationMenu() {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => removeNotification(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeNotification(notification.id)
+                          }}
                         >
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {notification.time}
+                        {getTimeAgo(notification.createdAt, formatDate)}
                       </p>
                     </div>
                   </div>
@@ -175,7 +258,10 @@ export function NotificationMenu() {
         {notifications.length > 0 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer justify-center text-primary">
+            <DropdownMenuItem 
+              className="cursor-pointer justify-center text-primary"
+              onClick={() => router.push("/notifications")}
+            >
               <span>عرض جميع الإشعارات</span>
             </DropdownMenuItem>
           </>

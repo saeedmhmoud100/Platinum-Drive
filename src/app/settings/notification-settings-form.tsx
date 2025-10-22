@@ -6,35 +6,22 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
 
 interface NotificationSettings {
-  emailNotifications: boolean
-  pushNotifications: boolean
-  desktopNotifications: boolean
   notifyOnUpload: boolean
-  notifyOnShare: boolean
-  notifyOnComment: boolean
-  notifyOnMention: boolean
   notifyOnStorageLimit: boolean
-  notifyOnNewFeatures: boolean
-  notifyOnSecurityAlerts: boolean
+  notifyOnSharedLink: boolean
+  notifyOnFileActivity: boolean
 }
 
 export default function NotificationSettingsForm() {
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [settings, setSettings] = useState<NotificationSettings>({
-    emailNotifications: true,
-    pushNotifications: false,
-    desktopNotifications: false,
     notifyOnUpload: true,
-    notifyOnShare: true,
-    notifyOnComment: true,
-    notifyOnMention: true,
     notifyOnStorageLimit: true,
-    notifyOnNewFeatures: false,
-    notifyOnSecurityAlerts: true,
+    notifyOnSharedLink: true,
+    notifyOnFileActivity: true,
   })
 
   useEffect(() => {
@@ -48,18 +35,14 @@ export default function NotificationSettingsForm() {
       if (!response.ok) throw new Error("فشل تحميل الإعدادات")
       
       const data = await response.json()
-      setSettings({
-        emailNotifications: data.emailNotifications ?? true,
-        pushNotifications: data.pushNotifications ?? false,
-        desktopNotifications: data.desktopNotifications ?? false,
-        notifyOnUpload: data.notifyOnUpload ?? true,
-        notifyOnShare: data.notifyOnShare ?? true,
-        notifyOnComment: data.notifyOnComment ?? true,
-        notifyOnMention: data.notifyOnMention ?? true,
-        notifyOnStorageLimit: data.notifyOnStorageLimit ?? true,
-        notifyOnNewFeatures: data.notifyOnNewFeatures ?? false,
-        notifyOnSecurityAlerts: data.notifyOnSecurityAlerts ?? true,
-      })
+      if (data.settings) {
+        setSettings({
+          notifyOnUpload: data.settings.notifyOnUpload ?? true,
+          notifyOnStorageLimit: data.settings.notifyOnStorageLimit ?? true,
+          notifyOnSharedLink: data.settings.notifyOnSharedLink ?? true,
+          notifyOnFileActivity: data.settings.notifyOnFileActivity ?? true,
+        })
+      }
     } catch (error) {
       toast.error("فشل تحميل الإعدادات")
     } finally {
@@ -98,58 +81,10 @@ export default function NotificationSettingsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8" dir="rtl">
-      {/* الإشعارات العامة */}
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold">وسائل الإشعارات</h3>
-          <p className="text-sm text-muted-foreground">اختر كيف تريد تلقي الإشعارات</p>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="emailNotifications" className="text-sm font-medium">البريد الإلكتروني</Label>
-              <p className="text-xs text-muted-foreground">استقبل الإشعارات عبر البريد الإلكتروني</p>
-            </div>
-            <Switch
-              id="emailNotifications"
-              checked={settings.emailNotifications}
-              onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="pushNotifications" className="text-sm font-medium">إشعارات الدفع</Label>
-              <p className="text-xs text-muted-foreground">استقبل الإشعارات على جهازك المحمول</p>
-            </div>
-            <Switch
-              id="pushNotifications"
-              checked={settings.pushNotifications}
-              onCheckedChange={(checked) => setSettings({ ...settings, pushNotifications: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="desktopNotifications" className="text-sm font-medium">إشعارات سطح المكتب</Label>
-              <p className="text-xs text-muted-foreground">استقبل الإشعارات على متصفحك</p>
-            </div>
-            <Switch
-              id="desktopNotifications"
-              checked={settings.desktopNotifications}
-              onCheckedChange={(checked) => setSettings({ ...settings, desktopNotifications: checked })}
-            />
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
       {/* أنواع الإشعارات */}
       <div className="space-y-4">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold">أنواع الإشعارات</h3>
+          <h3 className="text-base font-semibold">إعدادات الإشعارات</h3>
           <p className="text-sm text-muted-foreground">اختر الأحداث التي تريد تلقي إشعارات عنها</p>
         </div>
 
@@ -157,7 +92,7 @@ export default function NotificationSettingsForm() {
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
             <div className="space-y-0.5 text-right flex-1">
               <Label htmlFor="notifyOnUpload" className="text-sm font-medium">رفع الملفات</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند اكتمال رفع الملفات</p>
+              <p className="text-xs text-muted-foreground">إشعارات عند اكتمال رفع الملفات</p>
             </div>
             <Switch
               id="notifyOnUpload"
@@ -168,44 +103,8 @@ export default function NotificationSettingsForm() {
 
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
             <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="notifyOnShare" className="text-sm font-medium">المشاركة</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند مشاركة ملف معك</p>
-            </div>
-            <Switch
-              id="notifyOnShare"
-              checked={settings.notifyOnShare}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnShare: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="notifyOnComment" className="text-sm font-medium">التعليقات</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند إضافة تعليق على ملفاتك</p>
-            </div>
-            <Switch
-              id="notifyOnComment"
-              checked={settings.notifyOnComment}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnComment: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="notifyOnMention" className="text-sm font-medium">الإشارات</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند الإشارة إليك في تعليق</p>
-            </div>
-            <Switch
-              id="notifyOnMention"
-              checked={settings.notifyOnMention}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnMention: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
-            <div className="space-y-0.5 text-right flex-1">
               <Label htmlFor="notifyOnStorageLimit" className="text-sm font-medium">حد المساحة</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند الاقتراب من حد المساحة</p>
+              <p className="text-xs text-muted-foreground">إشعارات عند الاقتراب من حد المساحة</p>
             </div>
             <Switch
               id="notifyOnStorageLimit"
@@ -216,25 +115,25 @@ export default function NotificationSettingsForm() {
 
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
             <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="notifyOnNewFeatures" className="text-sm font-medium">الميزات الجديدة</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند إضافة ميزات جديدة</p>
+              <Label htmlFor="notifyOnSharedLink" className="text-sm font-medium">الروابط المشتركة</Label>
+              <p className="text-xs text-muted-foreground">إشعارات عند وصول شخص لرابط مشاركتك</p>
             </div>
             <Switch
-              id="notifyOnNewFeatures"
-              checked={settings.notifyOnNewFeatures}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnNewFeatures: checked })}
+              id="notifyOnSharedLink"
+              checked={settings.notifyOnSharedLink}
+              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnSharedLink: checked })}
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5 bg-destructive/5 md:col-span-2">
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
             <div className="space-y-0.5 text-right flex-1">
-              <Label htmlFor="notifyOnSecurityAlerts" className="text-sm font-medium">تنبيهات الأمان</Label>
-              <p className="text-xs text-muted-foreground">إشعارك عند حدوث نشاط أمني مشبوه (يُنصح بتفعيله)</p>
+              <Label htmlFor="notifyOnFileActivity" className="text-sm font-medium">أنشطة الملفات</Label>
+              <p className="text-xs text-muted-foreground">إشعارات عند حذف أو استعادة الملفات</p>
             </div>
             <Switch
-              id="notifyOnSecurityAlerts"
-              checked={settings.notifyOnSecurityAlerts}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnSecurityAlerts: checked })}
+              id="notifyOnFileActivity"
+              checked={settings.notifyOnFileActivity}
+              onCheckedChange={(checked) => setSettings({ ...settings, notifyOnFileActivity: checked })}
             />
           </div>
         </div>

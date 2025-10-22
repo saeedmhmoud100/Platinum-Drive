@@ -7,7 +7,7 @@ import { join } from 'path'
 // POST - Restore file from trash
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -19,7 +19,8 @@ export async function POST(
       )
     }
 
-    const fileId = params.id
+    const { id } = await params
+    const fileId = id
 
     // Find the file
     const file = await prisma.file.findUnique({
@@ -65,6 +66,12 @@ export async function POST(
       },
     })
 
+    // Send file restored notification
+    const { notifyFileRestored } = await import('@/lib/notification-utils')
+    await notifyFileRestored(session.user.id, file.name).catch(err =>
+      console.error('Failed to send restore notification:', err)
+    )
+
     return NextResponse.json({
       message: 'تم استعادة الملف بنجاح',
       file: restoredFile,
@@ -81,7 +88,7 @@ export async function POST(
 // DELETE - Permanently delete file
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -93,7 +100,8 @@ export async function DELETE(
       )
     }
 
-    const fileId = params.id
+    const { id } = await params
+    const fileId = id
 
     // Find the file
     const file = await prisma.file.findUnique({

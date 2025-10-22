@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface GeneralSettings {
   theme: string
   language: string
+  calendarType: string
   dateFormat: string
   timeFormat: string
   timezone: string
@@ -22,6 +24,7 @@ export default function GeneralSettingsForm() {
   const [settings, setSettings] = useState<GeneralSettings>({
     theme: "system",
     language: "ar",
+    calendarType: "gregorian",
     dateFormat: "DD/MM/YYYY",
     timeFormat: "24h",
     timezone: "Asia/Riyadh",
@@ -38,14 +41,20 @@ export default function GeneralSettingsForm() {
       if (!response.ok) throw new Error("فشل تحميل الإعدادات")
       
       const data = await response.json()
-      setSettings({
-        theme: data.theme || "system",
-        language: data.language || "ar",
-        dateFormat: data.dateFormat || "DD/MM/YYYY",
-        timeFormat: data.timeFormat || "24h",
-        timezone: data.timezone || "Asia/Riyadh",
-      })
+      console.log('Loaded settings:', data) // Debug log
+      
+      if (data.settings) {
+        setSettings({
+          theme: data.settings.theme || "system",
+          language: data.settings.language || "ar",
+          calendarType: data.settings.calendarType || "gregorian",
+          dateFormat: data.settings.dateFormat || "DD/MM/YYYY",
+          timeFormat: data.settings.timeFormat || "24h",
+          timezone: data.settings.timezone || "Asia/Riyadh",
+        })
+      }
     } catch (error) {
+      console.error('Failed to load settings:', error)
       toast.error("فشل تحميل الإعدادات")
     } finally {
       setFetching(false)
@@ -65,7 +74,27 @@ export default function GeneralSettingsForm() {
 
       if (!response.ok) throw new Error("فشل حفظ الإعدادات")
 
-      toast.success("تم حفظ الإعدادات بنجاح")
+      toast.success("تم حفظ الإعدادات بنجاح", {
+        description: "سيتم تطبيق التغييرات بعد إعادة تحميل الصفحة"
+      })
+
+      // Apply theme immediately
+      if (settings.theme) {
+        const root = window.document.documentElement
+        root.classList.remove('light', 'dark')
+        
+        if (settings.theme === 'system') {
+          const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          root.classList.add(systemTheme)
+        } else {
+          root.classList.add(settings.theme)
+        }
+      }
+
+      // Reload page after a short delay to apply all settings
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     } catch (error) {
       toast.error("فشل حفظ الإعدادات")
     } finally {
@@ -112,7 +141,28 @@ export default function GeneralSettingsForm() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ar">العربية</SelectItem>
-              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="en" disabled>
+                <div className="flex items-center gap-2">
+                  <span>English</span>
+                  <span className="text-xs bg-secondary px-2 py-0.5 rounded">قريباً</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="calendarType" className="text-sm font-medium">نوع التقويم</Label>
+          <Select
+            value={settings.calendarType}
+            onValueChange={(value) => setSettings({ ...settings, calendarType: value })}
+          >
+            <SelectTrigger id="calendarType" className="text-right h-10">
+              <SelectValue placeholder="اختر نوع التقويم" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gregorian">ميلادي</SelectItem>
+              <SelectItem value="hijri">هجري</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -150,7 +200,7 @@ export default function GeneralSettingsForm() {
           </Select>
         </div>
 
-        <div className="space-y-2 md:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="timezone" className="text-sm font-medium">المنطقة الزمنية</Label>
           <Select
             value={settings.timezone}

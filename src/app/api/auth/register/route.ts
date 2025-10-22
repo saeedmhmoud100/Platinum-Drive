@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth-utils"
 import { registerSchema } from "@/lib/validations/schemas"
 import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api-utils"
 import { ZodError } from "zod"
+import { notifyAdminsNewUser } from "@/lib/notification-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +53,18 @@ export async function POST(request: NextRequest) {
         },
       })
     }
+
+    // Send welcome email (async, don't wait)
+    import('@/lib/email-service').then(({ sendWelcomeEmail }) => {
+      sendWelcomeEmail(user.email, user.name || undefined).catch((error: Error) => {
+        console.error('Failed to send welcome email:', error)
+      })
+    })
+
+    // Notify admins about new user
+    notifyAdminsNewUser(user.email, user.name || undefined).catch((error: Error) => {
+      console.error('Failed to notify admins:', error)
+    })
 
     return successResponse(
       {

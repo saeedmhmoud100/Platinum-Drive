@@ -58,7 +58,7 @@ export async function DELETE(
 // Get shared link details (for owner)
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -66,7 +66,8 @@ export async function GET(
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
     }
 
-    const linkId = params.id
+    const { id } = await params
+    const linkId = id
 
     const sharedLink = await prisma.sharedLink.findUnique({
       where: { id: linkId },
