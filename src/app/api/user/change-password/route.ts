@@ -5,6 +5,8 @@ import { hashPassword, comparePassword } from "@/lib/auth-utils"
 import { changePasswordSchema } from "@/lib/validations/schemas"
 import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api-utils"
 import { ZodError } from "zod"
+import { notifyPasswordChanged } from "@/lib/notification-utils"
+import { requiresReauth } from "@/lib/security-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,23 +21,37 @@ export async function POST(request: NextRequest) {
     // Validate input with Zod
     const validatedData = changePasswordSchema.parse(body)
 
-    // Get current user with password
+    // Get current user with password and settings
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, password: true },
+      select: { 
+        id: true, 
+        password: true,
+        settings: {
+          select: {
+            requireReauth: true
+          }
+        }
+      },
     })
 
     if (!user || !user.password) {
       return errorResponse("المستخدم غير موجود", 404)
     }
 
-    // Verify current password
+    // Check if reauth is required
+    const needsReauth = user.settings?.requireReauth ?? false
+    
+    // Always verify current password (required field in schema)
     const isValidPassword = await comparePassword(
       validatedData.currentPassword,
       user.password
     )
 
     if (!isValidPassword) {
+      if (needsReauth) {
+        return errorResponse("كلمة المرور الحالية غير صحيحة. التحقق من الهوية مطلوب لتغيير كلمة المرور.", 403)
+      }
       return errorResponse("كلمة المرور الحالية غير صحيحة", 400)
     }
 
@@ -47,6 +63,9 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id },
       data: { password: hashedPassword },
     })
+
+    // Send notification
+    await notifyPasswordChanged(session.user.id)
 
     return successResponse({
       message: "تم تغيير كلمة المرور بنجاح",

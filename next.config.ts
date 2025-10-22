@@ -6,10 +6,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '100mb',
     },
-  },
-  // Increase API route body size limit
-  serverRuntimeConfig: {
-    maxFileSize: 100 * 1024 * 1024, // 100MB
+    // Increase body size limit for file uploads in App Router
+    middlewareClientMaxBodySize: '100mb',
   },
 };
 

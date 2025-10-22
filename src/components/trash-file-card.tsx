@@ -3,6 +3,7 @@
 import { File, FileText, Image, Video, Music, Archive, MoreVertical, RotateCcw, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useDateFormatter } from '@/hooks/use-date-formatter'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,11 +57,8 @@ const getFileIconColor = (mimeType: string) => {
 }
 
 export function TrashFileCard({ file, viewMode, onRestore, onPermanentDelete }: TrashFileCardProps) {
-  const deletedDate = new Date(file.deletedAt).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  const { formatDate } = useDateFormatter()
+  const deletedDate = formatDate(file.deletedAt)
 
   const handleRestore = (e: React.MouseEvent) => {
     e.stopPropagation()

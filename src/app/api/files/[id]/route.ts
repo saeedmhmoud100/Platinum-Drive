@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -16,13 +16,15 @@ export async function DELETE(
       )
     }
 
-    const fileId = params.id
+    const { id } = await params
+    const fileId = id
 
     // Get file record
     const file = await prisma.file.findUnique({
       where: { id: fileId },
       select: {
         id: true,
+        name: true,
         ownerId: true,
         size: true,
       },
@@ -60,6 +62,12 @@ export async function DELETE(
         },
       },
     })
+
+    // Send file deleted notification
+    const { notifyFileDeleted } = await import('@/lib/notification-utils')
+    await notifyFileDeleted(session.user.id, file.name).catch(err =>
+      console.error('Failed to send delete notification:', err)
+    )
 
     return NextResponse.json({
       success: true,

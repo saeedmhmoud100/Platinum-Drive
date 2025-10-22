@@ -63,6 +63,7 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
   const [folders, setFolders] = useState<FolderData[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [sortBy, setSortBy] = useState<string>('name')
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [breadcrumbPath, setBreadcrumbPath] = useState<BreadcrumbItem[]>([
     { id: null, name: 'الرئيسية' }
@@ -81,6 +82,27 @@ export default function FilesPageClient({ userId }: FilesPageClientProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null)
   const [selectedFile, setSelectedFile] = useState<{ id: string; name: string; mimeType?: string } | null>(null)
+
+  // Load user settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/user/settings')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.settings) {
+            // Map compact to list since components only support grid/list
+            const userViewMode = data.settings.defaultViewMode || 'grid'
+            setViewMode(userViewMode === 'compact' ? 'list' : userViewMode as 'grid' | 'list')
+            setSortBy(data.settings.defaultSortBy || 'name')
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user settings:', error)
+      }
+    }
+    loadSettings()
+  }, [])
 
   // Fetch files and folders
   const fetchData = async () => {

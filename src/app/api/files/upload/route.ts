@@ -11,12 +11,13 @@ import {
   sanitizeFilename,
   FILE_SIZE_LIMITS,
 } from '@/lib/file-utils'
+import { checkStorageWarning, notifyStorageWarning, notifyStorageFull } from '@/lib/notification-utils'
+import { compressImage, generateThumbnail, isProcessableImage } from '@/lib/image-utils'
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
+// Configure route segment for large file uploads
+export const runtime = 'nodejs'
+export const maxDuration = 60 // 60 seconds timeout
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,13 +30,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user with storage info
+    // Get user with storage info and settings
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
         usedStorageBytes: true,
         storageQuotaBytes: true,
+        settings: {
+          select: {
+            defaultUploadFolder: true,
+            autoGenerateThumbnails: true,
+            compressImages: true,
+            deduplicateFiles: true,
+          },
+        },
       },
     })
 
@@ -83,10 +92,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for duplicate files if deduplication is enabled
+    if (user.settings?.deduplicateFiles) {
+      const existingFile = await prisma.file.findFirst({
+        where: {
+          ownerId: user.id,
+          name: file.name,
+          size: file.size,
+          deletedAt: null,
+        },
+        select: { id: true, name: true },
+      })
+
+      if (existingFile) {
+        return NextResponse.json(
+          { error: `الملف "${file.name}" موجود بالفعل` },
+          { status: 409 }
+        )
+      }
+    }
+
+    // Use default folder from settings if no folder is specified
+    let targetFolderId = folderId
+    if (!targetFolderId && user.settings?.defaultUploadFolder && user.settings.defaultUploadFolder !== '/') {
+      // Try to find or create the default folder
+      const defaultFolder = await prisma.folder.findFirst({
+        where: {
+          ownerId: user.id,
+          path: user.settings.defaultUploadFolder,
+        },
+        select: { id: true },
+      })
+      if (defaultFolder) {
+        targetFolderId = defaultFolder.id
+      }
+    }
+
     // Verify folder ownership if folderId is provided
-    if (folderId) {
+    if (targetFolderId) {
       const folder = await prisma.folder.findUnique({
-        where: { id: folderId },
+        where: { id: targetFolderId },
         select: { ownerId: true },
       })
 
@@ -100,7 +145,23 @@ export async function POST(request: NextRequest) {
 
     // Prepare file data
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    let buffer: Buffer = Buffer.from(bytes)
+    let finalFileSize = file.size
+
+    // Image compression if enabled
+    if (user.settings?.compressImages && isProcessableImage(file.type)) {
+      try {
+        const compressedBuffer = await compressImage(buffer, file.type)
+        // Only use compressed version if it's actually smaller
+        if (compressedBuffer.length < buffer.length) {
+          buffer = Buffer.from(compressedBuffer)
+          finalFileSize = compressedBuffer.length
+          console.log(`Image compressed: ${file.size} -> ${finalFileSize} bytes`)
+        }
+      } catch (error) {
+        console.error('Image compression failed, using original:', error)
+      }
+    }
 
     // Generate unique filename
     const sanitizedName = sanitizeFilename(file.name)
@@ -118,18 +179,34 @@ export async function POST(request: NextRequest) {
     
     await writeFile(filePath, buffer)
 
+    // Generate thumbnails if enabled
+    let thumbnailPath: string | null = null
+    if (user.settings?.autoGenerateThumbnails) {
+      try {
+        thumbnailPath = await generateThumbnail(filePath, file.type)
+        if (thumbnailPath) {
+          console.log(`Thumbnail generated: ${thumbnailPath}`)
+        }
+      } catch (error) {
+        console.error('Thumbnail generation failed:', error)
+      }
+    }
+
     // Create file record in database
     const fileRecord = await prisma.file.create({
       data: {
         name: file.name,
         ownerId: user.id,
-        folderId: folderId || null,
-        size: file.size,
+        folderId: targetFolderId || null,
+        size: finalFileSize, // Use the actual saved file size
         mimeType: file.type,
         storageKey: relativePath,
         metadata: {
           originalName: file.name,
           uploadedAt: new Date().toISOString(),
+          compressed: user.settings?.compressImages && isProcessableImage(file.type),
+          originalSize: file.size,
+          thumbnail: thumbnailPath ? thumbnailPath.replace(process.cwd() + '/public', '') : null,
         },
       },
       include: {
@@ -142,15 +219,31 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update user's used storage
+    // Update user's used storage (use finalFileSize after compression)
     await prisma.user.update({
       where: { id: user.id },
       data: {
         usedStorageBytes: {
-          increment: BigInt(file.size),
+          increment: BigInt(finalFileSize),
         },
       },
     })
+
+    // Check storage usage and send notification if needed
+    const warningLevel = await checkStorageWarning(user.id)
+    if (warningLevel) {
+      if (warningLevel >= 100) {
+        await notifyStorageFull(user.id)
+      } else {
+        await notifyStorageWarning(user.id, warningLevel)
+      }
+    }
+
+    // Send file uploaded notification
+    const { notifyFileUploaded } = await import('@/lib/notification-utils')
+    await notifyFileUploaded(user.id, file.name, file.size).catch(err =>
+      console.error('Failed to send upload notification:', err)
+    )
 
     // Return success response
     return NextResponse.json({

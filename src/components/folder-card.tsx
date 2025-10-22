@@ -2,6 +2,7 @@
 
 import { Folder, MoreVertical, Edit, Trash2, FolderOpen, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useDateFormatter } from '@/hooks/use-date-formatter'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,8 @@ interface FolderCardProps {
 }
 
 export function FolderCard({ folder, onOpen, onDelete, onRename, onToggleFavorite, viewMode = 'grid' }: FolderCardProps) {
+  const { formatDate } = useDateFormatter()
+  
   const handleOpen = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     onOpen?.(folder.id)
@@ -60,12 +63,7 @@ export function FolderCard({ folder, onOpen, onDelete, onRename, onToggleFavorit
     onDelete?.(folder.id, folder.name)
   }
 
-  const formattedDate = new Date(folder.createdAt).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-
+  const formattedDate = formatDate(folder.createdAt)
   const itemCount = (folder._count?.files || 0) + (folder._count?.children || 0)
 
   if (viewMode === 'list') {

@@ -38,6 +38,7 @@ interface SystemSettings {
   'email.smtpHost': string
   'email.smtpPort': number
   'email.smtpUser': string
+  'email.smtpPassword': string
   'email.smtpSecure': boolean
   'email.fromAddress': string
   'email.fromName': string
@@ -55,6 +56,9 @@ interface SystemSettings {
   'general.registrationEnabled': boolean
   'general.defaultLanguage': string
   'general.defaultTimezone': string
+  'general.defaultCalendarType': string
+  'general.dateFormat': string
+  'general.timeFormat': string
 }
 
 export default function SystemSettings() {
@@ -205,7 +209,63 @@ export default function SystemSettings() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ar">العربية</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="en" disabled>
+                        <div className="flex items-center gap-2">
+                          <span>English</span>
+                          <Badge variant="secondary" className="text-xs">قريباً</Badge>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 text-right">
+                  <Label htmlFor="calendarType" className="text-right">نوع التقويم</Label>
+                  <Select 
+                    value={settings['general.defaultCalendarType'] || 'gregorian'}
+                    onValueChange={(value) => updateSetting('general.defaultCalendarType', value)}
+                  >
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="اختر نوع التقويم" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gregorian">ميلادي</SelectItem>
+                      <SelectItem value="hijri">هجري</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 text-right">
+                  <Label htmlFor="dateFormat" className="text-right">تنسيق التاريخ</Label>
+                  <Select 
+                    value={settings['general.dateFormat'] || 'DD/MM/YYYY'}
+                    onValueChange={(value) => updateSetting('general.dateFormat', value)}
+                  >
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="اختر تنسيق التاريخ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                      <SelectItem value="YYYY/MM/DD">YYYY/MM/DD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 text-right">
+                  <Label htmlFor="timeFormat" className="text-right">تنسيق الوقت</Label>
+                  <Select 
+                    value={settings['general.timeFormat'] || '24'}
+                    onValueChange={(value) => updateSetting('general.timeFormat', value)}
+                  >
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="اختر تنسيق الوقت" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="24">24 ساعة</SelectItem>
+                      <SelectItem value="12">12 ساعة</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -473,19 +533,34 @@ export default function SystemSettings() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="text-right">
+                  <Label htmlFor="smtpUser" className="text-right">اسم المستخدم SMTP</Label>
+                  <Input
+                    id="smtpUser"
+                    type="email"
+                    value={settings['email.smtpUser'] || ''}
+                    onChange={(e) => updateSetting('email.smtpUser', e.target.value)}
+                    placeholder="your-email@gmail.com"
+                    className="text-right"
+                  />
+                </div>
 
-              <div className="text-right">
-                <Label htmlFor="smtpUser" className="text-right">اسم المستخدم SMTP</Label>
-                <Input
-                  id="smtpUser"
-                  type="email"
-                  value={settings['email.smtpUser'] || ''}
-                  onChange={(e) => updateSetting('email.smtpUser', e.target.value)}
-                  placeholder="your-email@gmail.com"
-                  className="text-right"
-                />
+                <div className="text-right">
+                  <Label htmlFor="smtpPassword" className="text-right">كلمة مرور SMTP</Label>
+                  <Input
+                    id="smtpPassword"
+                    type="password"
+                    value={settings['email.smtpPassword'] || ''}
+                    onChange={(e) => updateSetting('email.smtpPassword', e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="text-right"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1 text-right">
+                    استخدم كلمة مرور التطبيق من إعدادات أمان حسابك
+                  </p>
+                </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-right">
                   <Label htmlFor="fromAddress" className="text-right">عنوان المرسل</Label>

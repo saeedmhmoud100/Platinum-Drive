@@ -16,6 +16,7 @@ model User {
   image              String?
   locale             String        @default("en")
   lastLoginAt        DateTime?
+  lastActivityAt     DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   isActive           Boolean       @default(true)
@@ -267,39 +268,26 @@ model UserSettings {
   // UI Preferences
   theme                 String   @default("system") // light, dark, system
   language              String   @default("ar") // ar, en
+  calendarType          String   @default("gregorian") // gregorian, hijri
   dateFormat            String   @default("DD/MM/YYYY")
   timeFormat            String   @default("24") // 12, 24
   timezone              String   @default("Africa/Cairo")
   
   // Notification Preferences
-  emailNotifications    Boolean  @default(true)
-  pushNotifications     Boolean  @default(true)
-  desktopNotifications  Boolean  @default(false)
-  
-  // Email Notification Types
   notifyOnUpload        Boolean  @default(true)
-  notifyOnShare         Boolean  @default(true)
-  notifyOnComment       Boolean  @default(true)
-  notifyOnMention       Boolean  @default(true)
   notifyOnStorageLimit  Boolean  @default(true)
-  notifyOnLoginAttempt  Boolean  @default(true)
-  notifyOnFileExpiry    Boolean  @default(true)
+  notifyOnSharedLink    Boolean  @default(true)
+  notifyOnFileActivity  Boolean  @default(true)
   
   // Upload Preferences
-  defaultFolderId       String?
-  autoOrganize          Boolean  @default(false)
+  defaultUploadFolder   String   @default("/")
+  autoGenerateThumbnails Boolean @default(true)
   compressImages        Boolean  @default(false)
-  generateThumbnails    Boolean  @default(true)
-  
-  // Privacy Settings
-  profileVisibility     String   @default("private") // public, private, contacts
-  showOnlineStatus      Boolean  @default(true)
-  allowIndexing         Boolean  @default(false)
+  deduplicateFiles      Boolean  @default(true)
   
   // File Management
   defaultSortBy         String   @default("name") // name, date, size, type
   defaultViewMode       String   @default("grid") // grid, list
-  showHiddenFiles       Boolean  @default(false)
   autoDeleteTrashed     Int      @default(30) // Days
   
   // Security

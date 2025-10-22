@@ -124,18 +124,26 @@ export default function UploadPageClient() {
           )
           resolve()
         } else {
-          const error = 'فشل رفع الملف'
+          // Try to parse error message from server
+          let errorMessage = 'فشل رفع الملف'
+          try {
+            const response = JSON.parse(xhr.responseText)
+            errorMessage = response.error || errorMessage
+          } catch (e) {
+            // Use default error message
+          }
+          
           setUploadFiles((prev) =>
             prev.map((f) =>
-              f.id === uploadFile.id ? { ...f, status: 'error', error } : f
+              f.id === uploadFile.id ? { ...f, status: 'error', error: errorMessage } : f
             )
           )
-          reject(new Error(error))
+          reject(new Error(errorMessage))
         }
       })
 
       xhr.addEventListener('error', () => {
-        const error = 'حدث خطأ أثناء رفع الملف'
+        const error = 'حدث خطأ في الاتصال بالخادم'
         setUploadFiles((prev) =>
           prev.map((f) =>
             f.id === uploadFile.id ? { ...f, status: 'error', error } : f
@@ -157,24 +165,27 @@ export default function UploadPageClient() {
     }
 
     setIsUploading(true)
+    let successCount = 0
+    let errorCount = 0
 
     try {
       // Upload files sequentially to avoid overwhelming the server
       for (const file of pendingFiles) {
         try {
           await uploadFile(file)
+          successCount++
         } catch (error) {
           console.error('Error uploading file:', error)
+          errorCount++
         }
       }
 
-      const successCount = uploadFiles.filter((f) => f.status === 'success').length
-      const errorCount = uploadFiles.filter((f) => f.status === 'error').length
-
-      if (successCount > 0) {
-        toast.success(`تم رفع ${successCount} ملف بنجاح`)
-      }
-      if (errorCount > 0) {
+      // Show toast notifications based on results
+      if (successCount > 0 && errorCount === 0) {
+        toast.success(`تم رفع ${successCount} ملف بنجاح ✓`)
+      } else if (successCount > 0 && errorCount > 0) {
+        toast.warning(`تم رفع ${successCount} ملف بنجاح، فشل رفع ${errorCount} ملف`)
+      } else if (errorCount > 0) {
         toast.error(`فشل رفع ${errorCount} ملف`)
       }
     } catch (error) {
@@ -401,7 +412,7 @@ export default function UploadPageClient() {
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[400px]">
-              <div className="divide-y">
+              <div className="divide-y" dir="rtl">
                 {uploadFiles.map((uploadFile) => (
                   <div
                     key={uploadFile.id}
@@ -425,10 +436,10 @@ export default function UploadPageClient() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">
+                            <p className="font-medium truncate" dir="rtl">
                               {uploadFile.file.name}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground" dir="ltr">
                               {formatFileSize(uploadFile.file.size)}
                             </p>
                           </div>

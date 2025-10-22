@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
+import { calculateLinkExpiry, getDefaultSharePermission, getDefaultLinkExpiry } from '@/lib/security-utils'
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +14,10 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const { fileId, expiresIn, password, permission, notes } = body
+    
+    // Get user's default settings
+    const defaultPermission = await getDefaultSharePermission(session.user.id)
+    const defaultExpiry = await getDefaultLinkExpiry(session.user.id)
 
     // Verify file ownership
     const file = await prisma.file.findUnique({
@@ -30,24 +35,30 @@ export async function POST(request: Request) {
     // Generate unique token
     const token = crypto.randomBytes(32).toString('hex')
 
-    // Calculate expiration date
+    // Calculate expiration date using user's default or provided value
     let expiresAt: Date | null = null
-    if (expiresIn && expiresIn !== 'never') {
-      const now = new Date()
-      switch (expiresIn) {
-        case '1h':
-          expiresAt = new Date(now.getTime() + 60 * 60 * 1000)
-          break
-        case '1d':
-          expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-          break
-        case '7d':
-          expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-          break
-        case '30d':
-          expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-          break
+    if (expiresIn) {
+      // Use provided expiry
+      if (expiresIn !== 'never') {
+        const now = new Date()
+        switch (expiresIn) {
+          case '1h':
+            expiresAt = new Date(now.getTime() + 60 * 60 * 1000)
+            break
+          case '1d':
+            expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            break
+          case '7d':
+            expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+            break
+          case '30d':
+            expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+            break
+        }
       }
+    } else {
+      // Use user's default setting
+      expiresAt = calculateLinkExpiry(defaultExpiry)
     }
 
     // Hash password if provided
@@ -56,7 +67,7 @@ export async function POST(request: Request) {
       passwordHash = await bcrypt.hash(password, 10)
     }
 
-    // Create shared link
+    // Create shared link with user's default permission if not provided
     const sharedLink = await prisma.sharedLink.create({
       data: {
         fileId,
@@ -64,7 +75,7 @@ export async function POST(request: Request) {
         createdById: session.user.id,
         expiresAt,
         passwordHash,
-        permission: permission || 'read',
+        permission: permission || defaultPermission || 'read',
         notes: notes || null,
       },
       include: {

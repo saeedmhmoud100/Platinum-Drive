@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useDateFormatter } from '@/hooks/use-date-formatter'
 import {
   Dialog,
   DialogContent,
@@ -99,6 +100,7 @@ function getFileIconColor(mimeType: string) {
 }
 
 export default function ShareAccessClient({ token }: ShareAccessClientProps) {
+  const { formatDate } = useDateFormatter()
   const [fileData, setFileData] = useState<SharedFileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -337,19 +339,9 @@ export default function ShareAccessClient({ token }: ShareAccessClientProps) {
 
   const FileIcon = fileData ? getFileIcon(fileData.file.mimeType) : File
   const iconColor = fileData ? getFileIconColor(fileData.file.mimeType) : 'text-gray-500'
-  const formattedDate = fileData ? new Date(fileData.file.createdAt).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }) : ''
+  const formattedDate = fileData ? formatDate(fileData.file.createdAt) : ''
   const expiryDate = fileData?.sharedLink.expiresAt
-    ? new Date(fileData.sharedLink.expiresAt).toLocaleDateString('ar-EG', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+    ? formatDate(fileData.sharedLink.expiresAt, true)
     : null
 
   return (

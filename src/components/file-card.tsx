@@ -15,6 +15,7 @@ import {
   Share2,
   Star
 } from 'lucide-react'
+import { useDateFormatter } from '@/hooks/use-date-formatter'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -86,6 +87,7 @@ function getFileIconColor(mimeType: string) {
 
 export function FileCard({ file, onDelete, onDownload, onShare, onPreview, onToggleFavorite, viewMode = 'grid' }: FileCardProps) {
   const [isDownloading, setIsDownloading] = useState(false)
+  const { formatDate } = useDateFormatter()
 
   const FileIcon = getFileIcon(file.mimeType)
   const iconColor = getFileIconColor(file.mimeType)
@@ -135,11 +137,7 @@ export function FileCard({ file, onDelete, onDownload, onShare, onPreview, onTog
     onToggleFavorite?.(file.id)
   }
 
-  const formattedDate = new Date(file.createdAt).toLocaleDateString('ar-SA', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  const formattedDate = formatDate(file.createdAt)
 
   if (viewMode === 'list') {
     return (

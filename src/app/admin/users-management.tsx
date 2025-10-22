@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { useDateFormatter } from "@/hooks/use-date-formatter"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -62,6 +63,7 @@ interface UsersManagementProps {
 }
 
 export default function UsersManagement({ onStatsChange }: UsersManagementProps) {
+  const { formatDate } = useDateFormatter()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -389,13 +391,7 @@ export default function UsersManagement({ onStatsChange }: UsersManagementProps)
                       <TableCell className="text-right">
                         {user.lastLoginAt ? (
                           <div className="text-sm">
-                            <div>{new Date(user.lastLoginAt).toLocaleDateString('ar-EG')}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(user.lastLoginAt).toLocaleTimeString('ar-EG', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </div>
+                            <div>{formatDate(user.lastLoginAt, true)}</div>
                           </div>
                         ) : (
                           'لم يسجل دخول'
@@ -584,13 +580,13 @@ export default function UsersManagement({ onStatsChange }: UsersManagementProps)
               <div className="grid grid-cols-2 gap-4 text-sm text-right">
                 <div>
                   <Label>تاريخ الإنشاء</Label>
-                  <p className="font-medium">{new Date(selectedUser.createdAt).toLocaleDateString('ar-EG')}</p>
+                  <p className="font-medium">{formatDate(selectedUser.createdAt)}</p>
                 </div>
                 <div>
                   <Label>آخر دخول</Label>
                   <p className="font-medium">
                     {selectedUser.lastLoginAt ? 
-                      new Date(selectedUser.lastLoginAt).toLocaleDateString('ar-EG') : 
+                      formatDate(selectedUser.lastLoginAt) : 
                       'لم يسجل دخول'
                     }
                   </p>
