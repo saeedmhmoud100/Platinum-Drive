@@ -67,18 +67,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file type
-    if (!isValidFileType(file.type)) {
-      return NextResponse.json(
-        { error: `نوع الملف غير مدعوم: ${file.type}` },
-        { status: 400 }
-      )
+    // Validate file type against policy
+    const fileTypePolicy = await prisma.fileTypePolicy.findUnique({
+      where: { mimeType: file.type }
+    })
+
+    // Check if file type has a policy
+    if (fileTypePolicy) {
+      if (!fileTypePolicy.isAllowed) {
+        return NextResponse.json(
+          { error: `نوع الملف ${file.type} غير مسموح به` },
+          { status: 400 }
+        )
+      }
+
+      // Check file size against type-specific limit if exists
+      if (fileTypePolicy.maxFileSize && file.size > Number(fileTypePolicy.maxFileSize)) {
+        return NextResponse.json(
+          { error: `حجم الملف يجب أن يكون أقل من ${Number(fileTypePolicy.maxFileSize) / 1024 / 1024}MB لهذا النوع` },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Fallback to legacy validation if no policy exists
+      if (!isValidFileType(file.type)) {
+        return NextResponse.json(
+          { error: `نوع الملف غير مدعوم: ${file.type}` },
+          { status: 400 }
+        )
+      }
     }
 
-    // Validate file size
-    if (!isValidFileSize(file.size)) {
+    // Get max file size from system settings (global limit)
+    const maxFileSizeSetting = await prisma.systemSettings.findUnique({
+      where: { key: 'upload.maxFileSize' }
+    })
+    const maxFileSize = maxFileSizeSetting?.value 
+      ? (typeof maxFileSizeSetting.value === 'number' ? maxFileSizeSetting.value : parseInt(String(maxFileSizeSetting.value))) * 1024 * 1024
+      : FILE_SIZE_LIMITS.MAX_FILE_SIZE
+
+    // Validate file size against global system settings
+    if (!isValidFileSize(file.size, maxFileSize)) {
       return NextResponse.json(
-        { error: `حجم الملف يجب أن يكون أقل من ${FILE_SIZE_LIMITS.MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { error: `حجم الملف يجب أن يكون أقل من ${maxFileSize / 1024 / 1024}MB` },
         { status: 400 }
       )
     }
@@ -179,9 +210,16 @@ export async function POST(request: NextRequest) {
     
     await writeFile(filePath, buffer)
 
+    // Check if thumbnail generation is enforced by system or enabled by user
+    const systemAutoThumbnailsSetting = await prisma.systemSettings.findUnique({
+      where: { key: 'upload.autoGenerateThumbnails' }
+    })
+    const systemEnforcesThumbnails = systemAutoThumbnailsSetting?.value === true
+    const shouldGenerateThumbnails = systemEnforcesThumbnails || user.settings?.autoGenerateThumbnails
+
     // Generate thumbnails if enabled
     let thumbnailPath: string | null = null
-    if (user.settings?.autoGenerateThumbnails) {
+    if (shouldGenerateThumbnails) {
       try {
         thumbnailPath = await generateThumbnail(filePath, file.type)
         if (thumbnailPath) {

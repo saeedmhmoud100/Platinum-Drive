@@ -54,7 +54,13 @@ const CredentialsSignUpForm = () => {
                 return;
             }
 
-            // Auto login after successful registration
+            // If email verification is required, redirect to verify page
+            if (data.requiresVerification) {
+                router.push(`/verify?email=${encodeURIComponent(email)}`);
+                return;
+            }
+
+            // Auto login after successful registration (only if verification not required)
             const signInResult = await signIn("credentials", {
                 email,
                 password,

@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   Settings, 
   Shield, 
@@ -16,17 +18,29 @@ import {
   Database, 
   Loader2,
   Save,
-  RotateCcw
+  RotateCcw,
+  AlertTriangle,
+  CheckCircle
 } from "lucide-react"
 import { toast } from "sonner"
 
 interface SystemSettings {
-  // Security Settings
+  // Security Settings - Login Attempts
   'security.maxLoginAttempts': number
-  'security.sessionTimeout': number
+  'security.accountLockoutDuration': number // minutes
+  
+  // Security Settings - Password Policy
+  'security.enforceStrongPasswords': boolean
+  'security.passwordExpiryDays': number // 0 = never expire
+  'security.passwordHistoryCount': number // prevent reusing last X passwords
+  
+  // Security Settings - Authentication
   'security.requireEmailVerification': boolean
   'security.allowPasswordReset': boolean
-  'security.enforceStrongPasswords': boolean
+  'security.enable2FA': boolean
+  
+  // Security Settings - Alerts
+  'security.suspiciousLoginAlerts': boolean
   
   // Upload Settings  
   'upload.maxFileSize': number
@@ -47,7 +61,6 @@ interface SystemSettings {
   'storage.defaultQuotaGB': number
   'storage.maxQuotaGB': number
   'storage.autoCleanupDays': number
-  'storage.compressionEnabled': boolean
   
   // General Settings
   'general.siteName': string
@@ -182,128 +195,80 @@ export default function SystemSettings() {
                 الإعدادات العامة
               </CardTitle>
               <CardDescription className="text-right">
-                إعدادات الموقع الأساسية والتفضيلات العامة
+                إعدادات الموقع الأساسية على مستوى النظام
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="text-right">
-                  <Label htmlFor="siteName" className="text-right">اسم الموقع</Label>
-                  <Input
-                    id="siteName"
-                    value={settings['general.siteName'] || ''}
-                    onChange={(e) => updateSetting('general.siteName', e.target.value)}
-                    placeholder="Platinum Drive"
-                    className="text-right"
-                  />
-                </div>
-                
-                <div className="space-y-2 text-right">
-                  <Label htmlFor="defaultLanguage" className="text-right">اللغة الافتراضية</Label>
-                  <Select 
-                    value={settings['general.defaultLanguage'] || 'ar'}
-                    onValueChange={(value) => updateSetting('general.defaultLanguage', value)}
-                  >
-                    <SelectTrigger className="text-right">
-                      <SelectValue placeholder="اختر اللغة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ar">العربية</SelectItem>
-                      <SelectItem value="en" disabled>
-                        <div className="flex items-center gap-2">
-                          <span>English</span>
-                          <Badge variant="secondary" className="text-xs">قريباً</Badge>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 text-right">
-                  <Label htmlFor="calendarType" className="text-right">نوع التقويم</Label>
-                  <Select 
-                    value={settings['general.defaultCalendarType'] || 'gregorian'}
-                    onValueChange={(value) => updateSetting('general.defaultCalendarType', value)}
-                  >
-                    <SelectTrigger className="text-right">
-                      <SelectValue placeholder="اختر نوع التقويم" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gregorian">ميلادي</SelectItem>
-                      <SelectItem value="hijri">هجري</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 text-right">
-                  <Label htmlFor="dateFormat" className="text-right">تنسيق التاريخ</Label>
-                  <Select 
-                    value={settings['general.dateFormat'] || 'DD/MM/YYYY'}
-                    onValueChange={(value) => updateSetting('general.dateFormat', value)}
-                  >
-                    <SelectTrigger className="text-right">
-                      <SelectValue placeholder="اختر تنسيق التاريخ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="YYYY/MM/DD">YYYY/MM/DD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 text-right">
-                  <Label htmlFor="timeFormat" className="text-right">تنسيق الوقت</Label>
-                  <Select 
-                    value={settings['general.timeFormat'] || '24'}
-                    onValueChange={(value) => updateSetting('general.timeFormat', value)}
-                  >
-                    <SelectTrigger className="text-right">
-                      <SelectValue placeholder="اختر تنسيق الوقت" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24">24 ساعة</SelectItem>
-                      <SelectItem value="12">12 ساعة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
+              {/* Site Name */}
               <div className="text-right">
-                <Label htmlFor="siteDescription" className="text-right">وصف الموقع</Label>
+                <Label htmlFor="siteName" className="text-right pb-2">اسم الموقع</Label>
                 <Input
-                  id="siteDescription"
-                  value={settings['general.siteDescription'] || ''}
-                  onChange={(e) => updateSetting('general.siteDescription', e.target.value)}
-                  placeholder="منصة تخزين الملفات الذكية"
+                  id="siteName"
+                  value={settings['general.siteName'] || ''}
+                  onChange={(e) => updateSetting('general.siteName', e.target.value)}
+                  placeholder="Platinum Drive"
                   className="text-right"
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <Switch
-                  checked={settings['general.maintenanceMode'] || false}
-                  onCheckedChange={(checked) => updateSetting('general.maintenanceMode', checked)}
+              {/* Site Description */}
+              <div className="text-right">
+                <Label htmlFor="siteDescription" className="text-right pb-2">وصف الموقع</Label>
+                <Textarea
+                  id="siteDescription"
+                  value={settings['general.siteDescription'] || ''}
+                  onChange={(e) => updateSetting('general.siteDescription', e.target.value)}
+                  placeholder="منصة تخزين ومشاركة الملفات السحابية"
+                  className="text-right min-h-[80px]"
                 />
-                <div className="space-y-0.5 text-right flex-1 mr-4">
-                  <Label>وضع الصيانة</Label>
-                  <p className="text-sm text-muted-foreground">
-                    تفعيل وضع الصيانة يمنع الوصول للموقع مؤقتاً
-                  </p>
-                </div>
               </div>
 
+              {/* Maintenance Mode */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <Switch
+                    checked={settings['general.maintenanceMode'] === true}
+                    onCheckedChange={(checked) => updateSetting('general.maintenanceMode', checked)}
+                  />
+                  <div className="space-y-0.5 text-right flex-1 mr-4">
+                    <Label>وضع الصيانة</Label>
+                    <p className="text-sm text-muted-foreground">
+                      تفعيل وضع الصيانة يمنع الوصول للموقع مؤقتاً
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Warning when maintenance mode is active */}
+                {settings['general.maintenanceMode'] === true && (
+                  <div className="flex items-start gap-3 rounded-lg bg-orange-500/10 border border-orange-500/20 p-4">
+                    <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+                    <div className="flex-1 text-right">
+                      <p className="text-sm font-medium text-orange-500">
+                        وضع الصيانة مفعّل حالياً
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        المستخدمون العاديون لا يمكنهم الوصول للموقع. فقط المسؤولون يمكنهم تسجيل الدخول.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Registration Enabled */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <Switch
-                  checked={settings['general.registrationEnabled'] !== false}
+                  checked={settings['general.registrationEnabled'] === true}
                   onCheckedChange={(checked) => updateSetting('general.registrationEnabled', checked)}
                 />
                 <div className="space-y-0.5 text-right flex-1 mr-4">
-                  <Label>تسجيل مستخدمين جدد</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>السماح للمستخدمين الجدد بإنشاء حسابات جديدة في النظام</Label>
+                    {settings['general.registrationEnabled'] === true && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    السماح للمستخدمين الجدد بإنشاء حسابات
+                    عند التعطيل، لن يتمكن المستخدمون الجدد من التسجيل
                   </p>
                 </div>
               </div>
@@ -320,48 +285,121 @@ export default function SystemSettings() {
                 إعدادات الأمان
               </CardTitle>
               <CardDescription className="text-right">
-                إعدادات الحماية وكلمات المرور والجلسات
+                إعدادات الحماية وكلمات المرور والمصادقة على مستوى النظام
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="text-right">
-                  <Label htmlFor="maxLoginAttempts" className="text-right">عدد محاولات تسجيل الدخول</Label>
-                  <Input
-                    id="maxLoginAttempts"
-                    type="number"
-                    min="3"
-                    max="10"
-                    value={settings['security.maxLoginAttempts'] || 5}
-                    onChange={(e) => updateSetting('security.maxLoginAttempts', parseInt(e.target.value))}
-                    className="text-right"
-                  />
-                </div>
-                
-                <div className="text-right">
-                  <Label htmlFor="sessionTimeout" className="text-right">انتهاء الجلسة (بالدقائق)</Label>
-                  <Input
-                    id="sessionTimeout"
-                    type="number"
-                    min="15"
-                    max="1440"
-                    value={settings['security.sessionTimeout'] || 60}
-                    onChange={(e) => updateSetting('security.sessionTimeout', parseInt(e.target.value))}
-                    className="text-right"
-                  />
+            <CardContent className="space-y-6">
+              
+              {/* Login Attempts Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-right">محاولات تسجيل الدخول</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="text-right">
+                    <Label htmlFor="maxLoginAttempts" className="text-right pb-2">عدد المحاولات المسموحة</Label>
+                    <Input
+                      id="maxLoginAttempts"
+                      type="number"
+                      min="3"
+                      max="10"
+                      value={settings['security.maxLoginAttempts'] || 5}
+                      onChange={(e) => updateSetting('security.maxLoginAttempts', parseInt(e.target.value))}
+                      className="text-right"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      عدد محاولات تسجيل الدخول الخاطئة قبل قفل الحساب
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <Label htmlFor="lockoutDuration" className="text-right pb-2">مدة القفل (بالدقائق)</Label>
+                    <Input
+                      id="lockoutDuration"
+                      type="number"
+                      min="15"
+                      max="1440"
+                      value={settings['security.accountLockoutDuration'] || 30}
+                      onChange={(e) => updateSetting('security.accountLockoutDuration', parseInt(e.target.value))}
+                      className="text-right"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      مدة قفل الحساب بعد تجاوز عدد المحاولات
+                    </p>
+                  </div>
                 </div>
               </div>
 
+              <Separator />
+
+              {/* Password Policy Section */}
               <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-right">سياسة كلمات المرور</h3>
+                
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <Switch
+                    checked={settings['security.enforceStrongPasswords'] !== false}
+                    onCheckedChange={(checked) => updateSetting('security.enforceStrongPasswords', checked)}
+                  />
+                  <div className="space-y-0.5 text-right flex-1 mr-4">
+                    <Label>إجبار كلمات مرور قوية</Label>
+                    <p className="text-sm text-muted-foreground">
+                      يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، أحرف كبيرة وصغيرة، أرقام ورموز
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="text-right">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label htmlFor="passwordExpiry" className="text-right">صلاحية كلمة المرور (بالأيام)</Label>
+                      <Badge variant="secondary" className="text-xs">قريباً</Badge>
+                    </div>
+                    <Input
+                      id="passwordExpiry"
+                      type="number"
+                      min="0"
+                      max="365"
+                      value={settings['security.passwordExpiryDays'] || 0}
+                      onChange={(e) => updateSetting('security.passwordExpiryDays', parseInt(e.target.value))}
+                      className="text-right"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      0 = بدون انتهاء صلاحية
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <Label htmlFor="passwordHistory" className="text-right pb-2">منع إعادة استخدام كلمات المرور</Label>
+                    <Input
+                      id="passwordHistory"
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={settings['security.passwordHistoryCount'] || 3}
+                      onChange={(e) => updateSetting('security.passwordHistoryCount', parseInt(e.target.value))}
+                      className="text-right"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      عدد كلمات المرور السابقة التي لا يمكن إعادة استخدامها
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Authentication & Verification Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-right">المصادقة والتحقق</h3>
+                
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <Switch
                     checked={settings['security.requireEmailVerification'] !== false}
                     onCheckedChange={(checked) => updateSetting('security.requireEmailVerification', checked)}
                   />
                   <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>التحقق من البريد الإلكتروني</Label>
+                    <Label>إجبار التحقق من البريد الإلكتروني</Label>
                     <p className="text-sm text-muted-foreground">
-                      إجبار المستخدمين على تأكيد بريدهم الإلكتروني
+                      المستخدمون الجدد يجب أن يؤكدوا بريدهم الإلكتروني قبل تسجيل الدخول
                     </p>
                   </div>
                 </div>
@@ -372,26 +410,49 @@ export default function SystemSettings() {
                     onCheckedChange={(checked) => updateSetting('security.allowPasswordReset', checked)}
                   />
                   <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>إعادة تعيين كلمة المرور</Label>
+                    <Label>السماح بإعادة تعيين كلمة المرور</Label>
                     <p className="text-sm text-muted-foreground">
-                      السماح للمستخدمين بإعادة تعيين كلمة المرور
+                      المستخدمون يمكنهم إعادة تعيين كلمة المرور عبر البريد الإلكتروني
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <Switch
-                    checked={settings['security.enforceStrongPasswords'] !== false}
-                    onCheckedChange={(checked) => updateSetting('security.enforceStrongPasswords', checked)}
+                    checked={settings['security.enable2FA'] !== false}
+                    onCheckedChange={(checked) => updateSetting('security.enable2FA', checked)}
                   />
                   <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>كلمات مرور قوية</Label>
+                    <div className="flex items-center gap-2">
+                      <Label>تفعيل المصادقة الثنائية (2FA)</Label>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      إجبار استخدام كلمات مرور معقدة
+                      السماح للمستخدمين بتفعيل المصادقة الثنائية لحساباتهم (يمكن إجباريًا من قبل الإدارة)
                     </p>
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Security Alerts Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-right">تنبيهات الأمان</h3>
+                
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <Switch
+                    checked={settings['security.suspiciousLoginAlerts'] !== false}
+                    onCheckedChange={(checked) => updateSetting('security.suspiciousLoginAlerts', checked)}
+                  />
+                  <div className="space-y-0.5 text-right flex-1 mr-4">
+                    <Label>تنبيهات تسجيل الدخول المشبوهة</Label>
+                    <p className="text-sm text-muted-foreground">
+                      إرسال تنبيه للمستخدمين عند اكتشاف محاولات تسجيل دخول من أجهزة أو مواقع غير معتادة
+                    </p>
+                  </div>
+                </div>
+              </div>
+
             </CardContent>
           </Card>
         </TabsContent>
@@ -411,7 +472,7 @@ export default function SystemSettings() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-right">
-                  <Label htmlFor="defaultQuota" className="text-right">الحصة الافتراضية (جيجابايت)</Label>
+                  <Label htmlFor="defaultQuota" className="text-right pb-2">الحصة الافتراضية (جيجابايت)</Label>
                   <Input
                     id="defaultQuota"
                     type="number"
@@ -424,7 +485,7 @@ export default function SystemSettings() {
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="maxQuota" className="text-right">الحد الأقصى للحصة (جيجابايت)</Label>
+                  <Label htmlFor="maxQuota" className="text-right pb-2">الحد الأقصى للحصة (جيجابايت)</Label>
                   <Input
                     id="maxQuota"
                     type="number"
@@ -438,7 +499,7 @@ export default function SystemSettings() {
               </div>
 
               <div className="text-right">
-                <Label htmlFor="maxFileSize" className="text-right">حجم الملف الأقصى (ميجابايت)</Label>
+                <Label htmlFor="maxFileSize" className="text-right pb-2">حجم الملف الأقصى (ميجابايت)</Label>
                 <Input
                   id="maxFileSize"
                   type="number"
@@ -453,42 +514,41 @@ export default function SystemSettings() {
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <Switch
-                    checked={settings['upload.virusScanEnabled'] !== false}
-                    onCheckedChange={(checked) => updateSetting('upload.virusScanEnabled', checked)}
-                  />
-                  <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>فحص الفيروسات</Label>
-                    <p className="text-sm text-muted-foreground">
-                      فحص الملفات المرفوعة للتأكد من خلوها من الفيروسات
-                    </p>
-                  </div>
-                </div>
+              <Separator />
 
+              <div className="space-y-4">
+                {/* Auto Generate Thumbnails */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <Switch
-                    checked={settings['upload.autoGenerateThumbnails'] !== false}
+                    checked={settings['upload.autoGenerateThumbnails'] === true}
                     onCheckedChange={(checked) => updateSetting('upload.autoGenerateThumbnails', checked)}
                   />
                   <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>إنشاء صور مصغرة تلقائياً</Label>
+                    <Label>فرض إنشاء الصور المصغرة</Label>
                     <p className="text-sm text-muted-foreground">
-                      إنشاء صور مصغرة للصور والفيديوهات المرفوعة
+                      إنشاء صور مصغرة تلقائياً للصور والفيديوهات المرفوعة على مستوى النظام
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-4">
+                {/* Virus Scan - Disabled */}
+                <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 p-4 opacity-60">
                   <Switch
-                    checked={settings['storage.compressionEnabled'] !== false}
-                    onCheckedChange={(checked) => updateSetting('storage.compressionEnabled', checked)}
+                    checked={false}
+                    disabled={true}
                   />
                   <div className="space-y-0.5 text-right flex-1 mr-4">
-                    <Label>ضغط التخزين</Label>
-                    <p className="text-sm text-muted-foreground">
-                      ضغط الملفات تلقائياً لتوفير مساحة التخزين
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-300">
+                        معطل
+                      </Badge>
+                      <Label className="text-orange-900 dark:text-orange-100 font-medium">فحص الفيروسات</Label>
+                    </div>
+                    <p className="text-xs text-orange-800 dark:text-orange-200">
+                      🔒 تواصل مع المطور لتفعيل هذه الميزة نظراً لحساسيتها
+                    </p>
+                    <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                      هذه الميزة تتطلب تكامل مع خدمة فحص خارجية (ClamAV)
                     </p>
                   </div>
                 </div>
@@ -512,7 +572,7 @@ export default function SystemSettings() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-right">
-                  <Label htmlFor="smtpHost" className="text-right">خادم SMTP</Label>
+                  <Label htmlFor="smtpHost" className="text-right mb-2">خادم SMTP</Label>
                   <Input
                     id="smtpHost"
                     value={settings['email.smtpHost'] || ''}
@@ -523,7 +583,7 @@ export default function SystemSettings() {
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="smtpPort" className="text-right">منفذ SMTP</Label>
+                  <Label htmlFor="smtpPort" className="text-right mb-2">منفذ SMTP</Label>
                   <Input
                     id="smtpPort"
                     type="number"
@@ -535,7 +595,7 @@ export default function SystemSettings() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-right">
-                  <Label htmlFor="smtpUser" className="text-right">اسم المستخدم SMTP</Label>
+                  <Label htmlFor="smtpUser" className="text-right mb-2">اسم المستخدم SMTP</Label>
                   <Input
                     id="smtpUser"
                     type="email"
@@ -547,7 +607,7 @@ export default function SystemSettings() {
                 </div>
 
                 <div className="text-right">
-                  <Label htmlFor="smtpPassword" className="text-right">كلمة مرور SMTP</Label>
+                  <Label htmlFor="smtpPassword" className="text-right mb-2">كلمة مرور SMTP</Label>
                   <Input
                     id="smtpPassword"
                     type="password"
@@ -563,7 +623,7 @@ export default function SystemSettings() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-right">
-                  <Label htmlFor="fromAddress" className="text-right">عنوان المرسل</Label>
+                  <Label htmlFor="fromAddress" className="text-right mb-2">عنوان المرسل</Label>
                   <Input
                     id="fromAddress"
                     type="email"
@@ -575,7 +635,7 @@ export default function SystemSettings() {
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="fromName" className="text-right">اسم المرسل</Label>
+                  <Label htmlFor="fromName" className="text-right mb-2">اسم المرسل</Label>
                   <Input
                     id="fromName"
                     value={settings['email.fromName'] || ''}
