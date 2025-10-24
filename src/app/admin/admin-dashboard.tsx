@@ -113,43 +113,43 @@ export default function AdminDashboard({ initialStats, userRoles, user }: AdminD
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Users */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">إجمالي المستخدمين</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3" dir="rtl">
+              <CardTitle className="text-base font-semibold">إجمالي المستخدمين</CardTitle>
+              <Users className="h-8 w-8 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-right">{stats.totalUsers.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground text-right">
-                <span className="text-green-600">{stats.recentUsers}</span> جديد هذا الأسبوع
+            <CardContent dir="rtl">
+              <div className="text-3xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                <span className="text-green-600 font-semibold">{stats.recentUsers}</span> جديد هذا الأسبوع
               </p>
             </CardContent>
           </Card>
 
           {/* Active Users */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">المستخدمون النشطون</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3" dir="rtl">
+              <CardTitle className="text-base font-semibold">المستخدمون النشطون</CardTitle>
+              <UserCheck className="h-8 w-8 text-green-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 text-right">
+            <CardContent dir="rtl">
+              <div className="text-3xl font-bold text-green-600">
                 {stats.activeUsers.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground text-right">
-                <span className="text-red-600">{stats.inactiveUsers}</span> غير نشط
+              <p className="text-sm text-muted-foreground mt-1">
+                <span className="text-red-600 font-semibold">{stats.inactiveUsers}</span> غير نشط
               </p>
             </CardContent>
           </Card>
 
           {/* Total Files */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Files className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">إجمالي الملفات</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3" dir="rtl">
+              <CardTitle className="text-base font-semibold">إجمالي الملفات</CardTitle>
+              <Files className="h-8 w-8 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-right">{stats.totalFiles.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground text-right">
+            <CardContent dir="rtl">
+              <div className="text-3xl font-bold">{stats.totalFiles.toLocaleString()}</div>
+              <p className="text-sm text-muted-foreground mt-1">
                 في النظام
               </p>
             </CardContent>
@@ -157,20 +157,22 @@ export default function AdminDashboard({ initialStats, userRoles, user }: AdminD
 
           {/* Storage Usage */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <HardDrive className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">استخدام التخزين</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3" dir="rtl">
+              <CardTitle className="text-base font-semibold">استخدام التخزين</CardTitle>
+              <HardDrive className="h-8 w-8 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-right">{formatBytes(stats.totalStorage)}</div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground justify-end">
-                <span>%{stats.systemStats.storageUtilization}</span>
-                <div className="w-8 bg-gray-200 rounded-full h-2">
+            <CardContent dir="rtl">
+              <div className="text-3xl font-bold">{formatBytes(stats.totalStorage)}</div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="bg-blue-600 h-2.5 rounded-full transition-all"
                     style={{ width: `${Math.min(stats.systemStats.storageUtilization, 100)}%` }}
                   />
                 </div>
+                <span className="text-sm text-muted-foreground font-semibold min-w-[36px]">
+                  %{stats.systemStats.storageUtilization}
+                </span>
               </div>
             </CardContent>
           </Card>

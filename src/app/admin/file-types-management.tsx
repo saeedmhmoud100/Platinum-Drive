@@ -80,11 +80,84 @@ export default function FileTypesManagement() {
     displayName: '',
     isAllowed: true,
     maxFileSize: 100, // MB
-    requiresApproval: false,
-    scanOnUpload: true,
-    generatePreview: false,
     color: '#6b7280'
   })
+
+  // Default file types for quick setup
+  const loadDefaultFileTypes = async () => {
+    const defaultTypes = [
+      // Images
+      { mimeType: 'image/jpeg', extension: 'jpg', category: 'image', displayName: 'JPEG Image', maxFileSize: 10, generatePreview: true },
+      { mimeType: 'image/png', extension: 'png', category: 'image', displayName: 'PNG Image', maxFileSize: 10, generatePreview: true },
+      { mimeType: 'image/gif', extension: 'gif', category: 'image', displayName: 'GIF Image', maxFileSize: 10, generatePreview: true },
+      { mimeType: 'image/webp', extension: 'webp', category: 'image', displayName: 'WebP Image', maxFileSize: 10, generatePreview: true },
+      
+      // Documents
+      { mimeType: 'application/pdf', extension: 'pdf', category: 'document', displayName: 'PDF Document', maxFileSize: 50, generatePreview: true },
+      { mimeType: 'application/msword', extension: 'doc', category: 'document', displayName: 'Word Document', maxFileSize: 50 },
+      { mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', extension: 'docx', category: 'document', displayName: 'Word Document (DOCX)', maxFileSize: 50 },
+      { mimeType: 'application/vnd.ms-excel', extension: 'xls', category: 'document', displayName: 'Excel Spreadsheet', maxFileSize: 50 },
+      { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', extension: 'xlsx', category: 'document', displayName: 'Excel Spreadsheet (XLSX)', maxFileSize: 50 },
+      { mimeType: 'text/plain', extension: 'txt', category: 'document', displayName: 'Text File', maxFileSize: 10 },
+      
+      // Audio
+      { mimeType: 'audio/mpeg', extension: 'mp3', category: 'audio', displayName: 'MP3 Audio', maxFileSize: 50 },
+      { mimeType: 'audio/wav', extension: 'wav', category: 'audio', displayName: 'WAV Audio', maxFileSize: 100 },
+      
+      // Video
+      { mimeType: 'video/mp4', extension: 'mp4', category: 'video', displayName: 'MP4 Video', maxFileSize: 500, generatePreview: true },
+      { mimeType: 'video/mpeg', extension: 'mpeg', category: 'video', displayName: 'MPEG Video', maxFileSize: 500 },
+      
+      // Archives
+      { mimeType: 'application/zip', extension: 'zip', category: 'archive', displayName: 'ZIP Archive', maxFileSize: 500 },
+      { mimeType: 'application/x-rar-compressed', extension: 'rar', category: 'archive', displayName: 'RAR Archive', maxFileSize: 500 },
+    ]
+
+    try {
+      setSaving(true)
+      let successCount = 0
+      let errorCount = 0
+
+      for (const type of defaultTypes) {
+        try {
+          const response = await fetch('/api/admin/file-types', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...type,
+              isAllowed: true,
+            })
+          })
+
+          if (response.ok) {
+            successCount++
+          } else {
+            const data = await response.json()
+            // Ignore duplicate errors
+            if (!data.error?.includes('موجود')) {
+              errorCount++
+            }
+          }
+        } catch (error) {
+          errorCount++
+        }
+      }
+
+      await loadFileTypes()
+      
+      if (successCount > 0) {
+        toast.success(`تم إضافة ${successCount} نوع ملف بنجاح`)
+      }
+      if (errorCount > 0) {
+        toast.info(`${errorCount} نوع ملف موجود مسبقاً`)
+      }
+    } catch (error) {
+      toast.error('فشل تحميل الأنواع الافتراضية')
+      console.error('Error loading default types:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   // Load file types
   const loadFileTypes = async () => {
@@ -160,9 +233,6 @@ export default function FileTypesManagement() {
       displayName: '',
       isAllowed: true,
       maxFileSize: 100,
-      requiresApproval: false,
-      scanOnUpload: true,
-      generatePreview: false,
       color: '#6b7280'
     })
     setEditingType(null)
@@ -178,9 +248,6 @@ export default function FileTypesManagement() {
       displayName: fileType.displayName || '',
       isAllowed: fileType.isAllowed,
       maxFileSize: fileType.maxFileSize ? Math.round(fileType.maxFileSize / (1024 * 1024)) : 100,
-      requiresApproval: fileType.requiresApproval,
-      scanOnUpload: fileType.scanOnUpload,
-      generatePreview: fileType.generatePreview,
       color: fileType.color || '#6b7280'
     })
     setShowDialog(true)
@@ -231,15 +298,35 @@ export default function FileTypesManagement() {
           </p>
         </div>
         
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setShowDialog(true); }} className="gap-2">
-              <Plus className="h-4 w-4" />
-              إضافة نوع ملف
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={loadDefaultFileTypes} 
+            disabled={saving}
+            className="gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                جاري التحميل...
+              </>
+            ) : (
+              <>
+                <FileType className="h-4 w-4" />
+                تحميل الأنواع الافتراضية
+              </>
+            )}
+          </Button>
           
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setShowDialog(true); }} className="gap-2">
+                <Plus className="h-4 w-4" />
+                إضافة نوع ملف
+              </Button>
+            </DialogTrigger>
+          
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
             <DialogHeader className="text-right">
               <DialogTitle className="text-right">
                 {editingType ? 'تعديل نوع الملف' : 'إضافة نوع ملف جديد'}
@@ -368,48 +455,31 @@ export default function FileTypesManagement() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border p-4">
                   <Switch
                     checked={formData.isAllowed}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAllowed: checked }))}
                   />
-                  <div className="flex-1 mr-3 text-right">
-                    <Label className="text-sm">السماح بالرفع</Label>
-                    <p className="text-xs text-muted-foreground">السماح برفع هذا النوع من الملفات</p>
+                  <div className="flex-1 mr-4 text-right">
+                    <Label className="text-sm font-medium">السماح بالرفع</Label>
+                    <p className="text-xs text-muted-foreground">السماح برفع هذا النوع من الملفات على مستوى النظام</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 p-4 opacity-60">
                   <Switch
-                    checked={formData.requiresApproval}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requiresApproval: checked }))}
+                    checked={false}
+                    disabled={true}
                   />
-                  <div className="flex-1 mr-3 text-right">
-                    <Label className="text-sm">يتطلب موافقة</Label>
-                    <p className="text-xs text-muted-foreground">مراجعة الملف قبل النشر</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <Switch
-                    checked={formData.scanOnUpload}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, scanOnUpload: checked }))}
-                  />
-                  <div className="flex-1 mr-3 text-right">
-                    <Label className="text-sm">فحص الفيروسات</Label>
-                    <p className="text-xs text-muted-foreground">فحص الملف عند الرفع</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <Switch
-                    checked={formData.generatePreview}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, generatePreview: checked }))}
-                  />
-                  <div className="flex-1 mr-3 text-right">
-                    <Label className="text-sm">إنشاء معاينة</Label>
-                    <p className="text-xs text-muted-foreground">إنشاء صورة مصغرة للملف</p>
+                  <div className="flex-1 mr-4 text-right">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-300 text-xs">
+                        معطل
+                      </Badge>
+                      <Label className="text-sm text-orange-900 dark:text-orange-100 font-medium">فحص الفيروسات</Label>
+                    </div>
+                    <p className="text-xs text-orange-700 dark:text-orange-300">هذه الميزة غير متاحة حالياً</p>
                   </div>
                 </div>
               </div>
@@ -434,7 +504,8 @@ export default function FileTypesManagement() {
               </div>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -523,7 +594,9 @@ export default function FileTypesManagement() {
                       </TableCell>
                       
                       <TableCell>
-                        <Badge variant={fileType.isAllowed ? "default" : "destructive"}>
+                        <Badge 
+                        variant={fileType.isAllowed ? "outline" : "destructive"} 
+                        className={fileType.isAllowed ? "bg-green-500 text-white" : "bg-red-500"}>
                           {fileType.isAllowed ? 'مسموح' : 'محظور'}
                         </Badge>
                       </TableCell>

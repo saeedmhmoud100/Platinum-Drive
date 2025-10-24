@@ -1,9 +1,29 @@
 import mime from 'mime-types'
+import prisma from '@/lib/prisma'
 
-// File size limits (in bytes)
+// Default file size limits (in bytes) - used as fallback
 export const FILE_SIZE_LIMITS = {
-  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB per file
+  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB per file (default)
   MAX_TOTAL_SIZE: 500 * 1024 * 1024, // 500MB total per upload
+}
+
+// Get max file size from system settings
+export async function getMaxFileSize(): Promise<number> {
+  try {
+    const setting = await prisma.systemSettings.findUnique({
+      where: { key: 'upload.maxFileSize' }
+    })
+    
+    if (setting && typeof setting.value === 'number') {
+      // Convert MB to bytes
+      return setting.value * 1024 * 1024
+    }
+    
+    return FILE_SIZE_LIMITS.MAX_FILE_SIZE // Fallback to default
+  } catch (error) {
+    console.error('Error fetching max file size:', error)
+    return FILE_SIZE_LIMITS.MAX_FILE_SIZE // Fallback to default
+  }
 }
 
 // Allowed file types
@@ -44,14 +64,54 @@ export function formatFileSize(bytes: number): string {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-// Validate file type
+// Validate file type (legacy - for backward compatibility)
 export function isValidFileType(mimeType: string): boolean {
   return ALL_ALLOWED_TYPES.includes(mimeType)
 }
 
-// Validate file size
-export function isValidFileSize(size: number): boolean {
-  return size > 0 && size <= FILE_SIZE_LIMITS.MAX_FILE_SIZE
+// Validate file type against database policy
+export async function isValidFileTypeFromPolicy(mimeType: string): Promise<{
+  allowed: boolean
+  policy?: any
+  message?: string
+}> {
+  const policy = await prisma.fileTypePolicy.findUnique({
+    where: { mimeType }
+  })
+
+  // If no policy exists, check against default allowed types
+  if (!policy) {
+    const isAllowed = ALL_ALLOWED_TYPES.includes(mimeType)
+    return {
+      allowed: isAllowed,
+      message: isAllowed ? undefined : `نوع الملف غير مدعوم: ${mimeType}`
+    }
+  }
+
+  // Check if file type is allowed
+  if (!policy.isAllowed) {
+    return {
+      allowed: false,
+      policy,
+      message: `نوع الملف ${mimeType} غير مسموح به`
+    }
+  }
+
+  return {
+    allowed: true,
+    policy
+  }
+}
+
+// Validate file size against a specific limit
+export function isValidFileSize(size: number, maxSize: number = FILE_SIZE_LIMITS.MAX_FILE_SIZE): boolean {
+  return size > 0 && size <= maxSize
+}
+
+// Validate file size against system settings
+export async function isValidFileSizeFromSettings(size: number): Promise<boolean> {
+  const maxSize = await getMaxFileSize()
+  return isValidFileSize(size, maxSize)
 }
 
 // Get file extension from filename
