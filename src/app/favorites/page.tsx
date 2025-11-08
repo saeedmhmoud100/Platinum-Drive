@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import MainLayout from '@/components/main-layout'
+import MainLayout from '@/components/layout/main-layout'
 import FavoritesClient from './favorites-client'
 
 export const metadata: Metadata = {

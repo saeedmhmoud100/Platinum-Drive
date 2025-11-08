@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 import SharedLinksClient from './shared-client'
-import MainLayout from '@/components/main-layout'
+import MainLayout from '@/components/layout/main-layout'
 
 export default async function SharedLinksPage() {
   const session = await auth()

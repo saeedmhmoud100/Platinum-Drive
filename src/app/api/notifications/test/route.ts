@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 import {
   notifyStorageWarning,
   notifyStorageFull,
@@ -9,7 +9,7 @@ import {
   notifyPasswordChanged,
   notifyAdminsNewUser,
   notifyAdminsSystemStorage,
-} from '@/lib/notification-utils'
+} from '@/lib/services/notification'
 
 /**
  * POST /api/notifications/test

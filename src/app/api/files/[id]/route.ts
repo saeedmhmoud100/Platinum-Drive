@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { auth } from '@/lib/auth/auth'
+import prisma from '@/lib/db/prisma'
 
 export async function DELETE(
   request: NextRequest,
@@ -64,7 +64,7 @@ export async function DELETE(
     })
 
     // Send file deleted notification
-    const { notifyFileDeleted } = await import('@/lib/notification-utils')
+    const { notifyFileDeleted } = await import('@/lib/services/notification')
     await notifyFileDeleted(session.user.id, file.name).catch(err =>
       console.error('Failed to send delete notification:', err)
     )

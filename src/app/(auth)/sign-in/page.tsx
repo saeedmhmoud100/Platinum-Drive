@@ -2,7 +2,7 @@ import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} f
 import { Metadata } from "next";
 import CredentialsSignInForm from "./credentials-signin-form";
 import Link from "next/link";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/db/prisma";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {

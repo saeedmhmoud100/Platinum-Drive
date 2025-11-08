@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/auth"
 import { redirect } from "next/navigation"
-import prisma from "@/lib/prisma"
+import prisma from "@/lib/db/prisma"
 import AdminWrapper from "./admin-wrapper"
 
 // Check if user is admin

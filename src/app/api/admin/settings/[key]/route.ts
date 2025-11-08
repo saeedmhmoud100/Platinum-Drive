@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { errorResponse, successResponse } from "@/lib/api-utils"
+import { auth } from "@/lib/auth/auth"
+import prisma from "@/lib/db/prisma"
+import { errorResponse, successResponse } from "@/lib/api/api-utils"
 
 // Check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
