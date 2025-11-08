@@ -1,6 +1,6 @@
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 import { redirect } from 'next/navigation'
-import MainLayout from '@/components/main-layout'
+import MainLayout from '@/components/layout/main-layout'
 import TrashPageClient from './trash-client'
 
 export default async function TrashPage() {

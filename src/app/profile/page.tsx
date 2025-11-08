@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/auth"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -7,8 +7,8 @@ import ProfileForm from "./profile-form"
 import PasswordForm from "./password-form"
 import LoginHistory from "./login-history"
 import { User, Shield, History } from "lucide-react"
-import MainLayout from "@/components/main-layout"
-import prisma from "@/lib/prisma"
+import MainLayout from "@/components/layout/main-layout"
+import prisma from "@/lib/db/prisma"
 
 export default async function ProfilePage() {
   const session = await auth()

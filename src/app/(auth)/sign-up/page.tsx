@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserX } from "lucide-react";
 import CredentialsSignUpForm from "./credentials-signup-form";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/db/prisma";
 
 async function isRegistrationEnabled() {
   try {

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Almarai } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { SessionProvider } from "@/components/session-provider";
-import { MaintenanceChecker } from "@/components/maintenance-checker";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { SessionProvider } from "@/components/providers/session-provider";
+import { MaintenanceChecker } from "@/components/shared/maintenance-checker";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -26,10 +26,17 @@ const almarai = Almarai({
 export const metadata: Metadata = {
   title: {
     default: "Platinum Drive - منصة التخزين السحابي",
-    template: "%s | Platinum Drive"
+    template: "%s | Platinum Drive",
   },
-  description: "منصة تخزين سحابي حديثة وآمنة مع ميزات متقدمة لإدارة الملفات والمستخدمين",
-  keywords: ["تخزين سحابي", "ملفات", "مشاركة ملفات", "cloud storage", "file management"],
+  description:
+    "منصة تخزين سحابي حديثة وآمنة مع ميزات متقدمة لإدارة الملفات والمستخدمين",
+  keywords: [
+    "تخزين سحابي",
+    "ملفات",
+    "مشاركة ملفات",
+    "cloud storage",
+    "file management",
+  ],
   authors: [{ name: "Youssef Ahmed" }],
   icons: {
     icon: "/logo.png",
@@ -56,9 +63,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <MaintenanceChecker>
-              {children}
-            </MaintenanceChecker>
+            <MaintenanceChecker>{children}</MaintenanceChecker>
             <Toaster />
           </ThemeProvider>
         </SessionProvider>

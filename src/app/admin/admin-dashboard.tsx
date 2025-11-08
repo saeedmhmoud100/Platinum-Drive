@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import ClientLayout from "@/components/client-layout"
+import ClientLayout from "@/components/layout/client-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"

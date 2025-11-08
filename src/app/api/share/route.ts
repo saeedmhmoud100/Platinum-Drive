@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { auth } from '@/lib/auth/auth'
+import prisma from '@/lib/db/prisma'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
-import { calculateLinkExpiry, getDefaultSharePermission, getDefaultLinkExpiry } from '@/lib/security-utils'
+import { calculateLinkExpiry, getDefaultSharePermission, getDefaultLinkExpiry } from '@/lib/security/security-utils'
 
 export async function POST(request: Request) {
   try {

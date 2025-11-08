@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import FilePreviewDialog from '@/components/file-preview-dialog'
+import FilePreviewDialog from '@/components/dialogs/file-preview-dialog'
 import { useDateFormatter } from '@/hooks/use-date-formatter'
 import {
   AlertDialog,
@@ -37,9 +37,9 @@ import {
   RefreshCw,
   ExternalLink,
 } from 'lucide-react'
-import { formatFileSize, getFileCategory } from '@/lib/file-utils'
+import { formatFileSize, getFileCategory } from '@/lib/utils/file'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/cn'
 
 interface SharedLinksClientProps {
   userId: string

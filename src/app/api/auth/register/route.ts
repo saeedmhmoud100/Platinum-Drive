@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server"
-import prisma from "@/lib/prisma"
-import { hashPassword } from "@/lib/auth-utils"
+import prisma from "@/lib/db/prisma"
+import { hashPassword } from "@/lib/auth/auth-utils"
 import { registerSchema } from "@/lib/validations/schemas"
-import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api-utils"
+import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api/api-utils"
 import { ZodError } from "zod"
-import { notifyAdminsNewUser } from "@/lib/notification-utils"
-import { validatePassword, savePasswordToHistory } from "@/lib/password-policy"
-import { createVerificationCode, sendEmailVerification } from "@/lib/verification"
+import { notifyAdminsNewUser } from "@/lib/services/notification"
+import { validatePassword, savePasswordToHistory } from "@/lib/security/password-policy"
+import { createVerificationCode, sendEmailVerification } from "@/lib/auth/verification"
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       await sendEmailVerification(user.email, user.name || undefined, verificationCode.code)
     } else {
       // Send welcome email if verification not required (async, don't wait)
-      import('@/lib/email-service').then(({ sendWelcomeEmail }) => {
+      import('@/lib/services/email').then(({ sendWelcomeEmail }) => {
         sendWelcomeEmail(user.email, user.name || undefined).catch((error: Error) => {
           console.error('Failed to send welcome email:', error)
         })

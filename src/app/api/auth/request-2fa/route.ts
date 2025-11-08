@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
-import prisma from "@/lib/prisma"
-import { errorResponse, successResponse } from "@/lib/api-utils"
-import { createTwoFactorCode, sendTwoFactorCode } from "@/lib/verification"
+import prisma from "@/lib/db/prisma"
+import { errorResponse, successResponse } from "@/lib/api/api-utils"
+import { createTwoFactorCode, sendTwoFactorCode } from "@/lib/auth/verification"
 
 export async function POST(request: NextRequest) {
   try {

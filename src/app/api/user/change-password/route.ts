@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { hashPassword, comparePassword } from "@/lib/auth-utils"
+import { auth } from "@/lib/auth/auth"
+import prisma from "@/lib/db/prisma"
+import { hashPassword, comparePassword } from "@/lib/auth/auth-utils"
 import { changePasswordSchema } from "@/lib/validations/schemas"
-import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api-utils"
+import { validationErrorResponse, errorResponse, successResponse } from "@/lib/api/api-utils"
 import { ZodError } from "zod"
-import { notifyPasswordChanged } from "@/lib/notification-utils"
-import { requiresReauth } from "@/lib/security-utils"
+import { notifyPasswordChanged } from "@/lib/services/notification"
+import { requiresReauth } from "@/lib/security/security-utils"
 
 export async function POST(request: NextRequest) {
   try {

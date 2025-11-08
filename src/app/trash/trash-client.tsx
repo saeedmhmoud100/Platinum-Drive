@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrashFileCard } from '@/components/trash-file-card'
-import { RestoreFileDialog } from '@/components/restore-file-dialog'
-import { PermanentDeleteDialog } from '@/components/permanent-delete-dialog'
+import { TrashFileCard } from '@/components/cards/trash-file-card'
+import { RestoreFileDialog } from '@/components/dialogs/restore-file-dialog'
+import { PermanentDeleteDialog } from '@/components/dialogs/permanent-delete-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { RefreshCw, Grid3x3, List, Loader2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatFileSize } from '@/lib/file-utils'
+import { formatFileSize } from '@/lib/utils/file'
 
 interface TrashPageClientProps {
   userId: string

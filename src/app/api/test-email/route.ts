@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 
 /**
  * POST /api/test-email
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       sendStorageWarningEmail,
       sendStorageFullEmail,
       sendWelcomeEmail,
-    } = await import('@/lib/email-service')
+    } = await import('@/lib/services/email')
 
     const session = await auth()
     

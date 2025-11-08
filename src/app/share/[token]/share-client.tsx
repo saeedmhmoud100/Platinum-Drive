@@ -29,9 +29,9 @@ import {
   User,
   Clock,
 } from 'lucide-react'
-import { formatFileSize, getFileCategory } from '@/lib/file-utils'
+import { formatFileSize, getFileCategory } from '@/lib/utils/file'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/cn'
 
 interface ShareAccessClientProps {
   token: string

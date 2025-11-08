@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { auth } from '@/lib/auth/auth'
+import prisma from '@/lib/db/prisma'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 
@@ -67,7 +67,7 @@ export async function POST(
     })
 
     // Send file restored notification
-    const { notifyFileRestored } = await import('@/lib/notification-utils')
+    const { notifyFileRestored } = await import('@/lib/services/notification')
     await notifyFileRestored(session.user.id, file.name).catch(err =>
       console.error('Failed to send restore notification:', err)
     )

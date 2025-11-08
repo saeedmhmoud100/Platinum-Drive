@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { auth } from '@/lib/auth/auth'
+import prisma from '@/lib/db/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -10,9 +10,9 @@ import {
   generateUniqueFilename,
   sanitizeFilename,
   FILE_SIZE_LIMITS,
-} from '@/lib/file-utils'
-import { checkStorageWarning, notifyStorageWarning, notifyStorageFull } from '@/lib/notification-utils'
-import { compressImage, generateThumbnail, isProcessableImage } from '@/lib/image-utils'
+} from '@/lib/utils/file'
+import { checkStorageWarning, notifyStorageWarning, notifyStorageFull } from '@/lib/services/notification'
+import { compressImage, generateThumbnail, isProcessableImage } from '@/lib/utils/image'
 
 // Configure route segment for large file uploads
 export const runtime = 'nodejs'
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send file uploaded notification
-    const { notifyFileUploaded } = await import('@/lib/notification-utils')
+    const { notifyFileUploaded } = await import('@/lib/services/notification')
     await notifyFileUploaded(user.id, file.name, file.size).catch(err =>
       console.error('Failed to send upload notification:', err)
     )

@@ -25,7 +25,7 @@ import {
   CloudUpload,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatFileSize } from '@/lib/file-utils'
+import { formatFileSize } from '@/lib/utils/file'
 
 interface FolderOption {
   id: string
