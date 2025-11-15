@@ -27,6 +27,7 @@
 Platinum Drive is an open-source cloud storage platform built with modern technologies, offering enterprise-level features for individuals and organizations. With a beautiful RTL interface, robust security features, and comprehensive admin controls, it's perfect for teams looking for a self-hosted storage solution.
 
 > **⚠️ Language Notice:** This project is currently available **only in Arabic language** with full RTL (Right-to-Left) support and Hijri calendar integration.
+> **⚠️ For Demo:** Email: user@platinum-app.com Password: 123456, I have Disabled some of the Settings in the user side, for the ADmin Side and FULLY FUNCATIONAL Version Contact me to Send the Deatils to you.
 
 ## 📸 Screenshots
 
